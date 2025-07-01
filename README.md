@@ -1,1 +1,1 @@
-The Logical & Editorial Scrutiny Scale (also known as Le critique vedite)
+The Logical & Editorial Narrative Scrutiny Scale(also known as Le Critique vérité)
