@@ -1,9 +1,7 @@
-
-# app.py
 import streamlit as st
 
 # --- ALL YOUR CATEGORY DATA IS STORED HERE ---
-# No changes needed here. This data structure is perfect.
+# (This data is unchanged from your original script)
 CATEGORY_DEFINITIONS = [
     {
         "name": "Story/Plot",
@@ -39,43 +37,175 @@ CATEGORY_DEFINITIONS = [
             "10: Flawless / Iconic. A transcendent performance that becomes the definitive portrayal of that character."
         ]
     },
-    # ... (all your other categories from the original script go here) ...
-    # I've omitted them for brevity, but you should copy the entire list.
     {
-        "name": "Soundtrack", "max_score": 10, "weight": 0.08, "descriptors": ["..."]
+        "name": "Soundtrack",
+        "max_score": 10,
+        "weight": 0.08,
+        "descriptors": [
+            "1: Detrimental. The music is actively annoying or so inappropriate it sabotages the film's mood.",
+            "2: Poor. A distracting or badly implemented soundtrack that consistently takes you out of the movie.",
+            "3: Generic & Forgettable. The music is bland 'elevator music' that adds absolutely nothing.",
+            "4: Misplaced. The music technically works but is often ill-suited for the tone or emotion of a scene.",
+            "5: Adequate. The soundtrack is present and doesn't cause any problems, but is entirely unmemorable.",
+            "6: Fitting. The music appropriately matches the film's tone and supports the on-screen action.",
+            "7: Good. An effective soundtrack that noticeably enhances the emotion and atmosphere of key scenes.",
+            "8: Excellent. A very strong, memorable score that is a core part of the film's identity.",
+            "9: Powerful & Integral. The music is perfectly woven into the film, elevating the entire experience in a profound way.",
+            "10: Iconic. An unforgettable, masterful soundtrack that defines the film and becomes a classic in its own right."
+        ]
     },
     {
-        "name": "Plotholes", "max_score": 10, "weight": 0.05, "descriptors": ["..."]
+        "name": "Plotholes",
+        "max_score": 10,
+        "weight": 0.05,
+        "descriptors": [
+            "1: Completely Broken. The film's logic is so flawed it is fundamentally nonsensical.",
+            "2: Riddled with Story-Breaking Holes. Massive contradictions that make the entire plot fall apart.",
+            "3: Numerous Major Holes. The plot relies on events or motivations that make no sense upon reflection.",
+            "4: Several Noticeable Holes. Logical gaps that are obvious during viewing and undermine key moments.",
+            "5: A Few Nagging Holes. Some inconsistencies that create distracting questions but don't derail the whole story.",
+            "6: Mostly Consistent. There might be one or two minor head-scratchers that can be overlooked.",
+            "7: Largely Cohesive. Any potential issues are small enough to be considered nitpicks, not true plotholes.",
+            "8: Very Tight. The plot is logical and well-constructed with strong cause-and-effect.",
+            "9: Almost Airtight. The internal logic is exceptionally consistent and rewards close attention.",
+            "10: Flawless. Every action, motivation, and event is perfectly consistent with the film's established rules."
+        ]
     },
     {
-        "name": "Tonality", "max_score": 10, "weight": 0.08, "descriptors": ["..."]
+        "name": "Tonality",
+        "max_score": 10,
+        "weight": 0.08,
+        "descriptors": [
+            "1: Incoherent Whiplash. Jarring, chaotic shifts between incompatible tones.",
+            "2: Frequently Confused. Significant tonal shifts that feel amateurishly handled.",
+            "3: Consistently Wrong. The tone is consistent, but fundamentally wrong for the story.",
+            "4: Ill-Fitting Tone. Creates a consistent 'off' feeling, preventing full impact.",
+            "5: Inconsistent Execution. Aims for the right tone but falters distractingly.",
+            "6: Skillful but Blended Tones. Juggles multiple tones well, but lacks singular focus.",
+            "7: Competent & Consistent. Establishes and maintains a clear, appropriate tone.",
+            "8: Strong & Effective Tone. The tone is a powerful tool that enhances the story.",
+            "9: Masterful & Immersive Tone. The tone creates a rich, all-encompassing atmosphere.",
+            "10: A Tonal Masterclass. A perfect, unwavering tone that defines the experience."
+        ]
     },
     {
-        "name": "Core Concept", "max_score": 10, "weight": 0.03, "descriptors": ["..."]
+        "name": "Core Concept",
+        "max_score": 10,
+        "weight": 0.03,
+        "descriptors": [
+            "1: Fundamentally Bad Idea. A premise with no discernible merit.",
+            "2: Deeply Unoriginal. A blatant copy of a better idea.",
+            "3: Tired Premise. Done to death with nothing new to add.",
+            "4: Generic Concept. A 'by-the-numbers' idea that is safe but unexciting.",
+            "5: Standard Premise. An acceptable, familiar concept.",
+            "6: Solid Concept. A good, sturdy idea that offers a good platform.",
+            "7: Interesting Concept. A genuinely intriguing premise that sparks curiosity.",
+            "8: Great Concept. A clever, original, or thought-provoking idea.",
+            "9: Brilliant Concept. A truly unique and fascinating premise.",
+            "10: Game-Changing Idea. A revolutionary concept."
+        ]
     },
     {
-        "name": "Expectation", "max_score": 10, "weight": 0.05, "descriptors": ["..."]
+        "name": "Expectation",
+        "max_score": 10,
+        "weight": 0.05,
+        "descriptors": [
+            "1: Colossal Disappointment. Failed on all fronts.",
+            "2: A Bait-and-Switch. Fundamentally misrepresented itself.",
+            "3: Significant Letdown. A pale, poorly executed shadow of what it should be.",
+            "4: Underwhelming. Delivered the premise in a dull, uninspired way.",
+            "5: Mixed Bag. Succeeded on some promises while failing on others.",
+            "6: Delivered on its Promise. Exactly what it advertised.",
+            "7: Satisfying Fulfillment. Delivered on its promise in an enjoyable way.",
+            "8: Exceeded Expectations. Delivered everything promised and then some.",
+            "9: Impressive Over-delivery. Elevated its premise to a surprising level.",
+            "10: A Transcendent Experience. Redefined what you thought the movie could be."
+        ]
     },
     {
-        "name": "Audio", "max_score": 5, "weight": 0.05, "descriptors": ["..."]
+        "name": "Audio",
+        "max_score": 5,
+        "weight": 0.05,
+        "descriptors": [
+            "1: Unusable. Ruins the viewing experience.",
+            "2: Poor. Persistent issues that pull you out of the movie.",
+            "3: Acceptable. Functional but not perfect (e.g., too quiet/loud).",
+            "4: Good. Clean, clear, and well-balanced. Does its job.",
+            "5: Excellent. Immersive, dynamic, and enhances the film."
+        ]
     },
     {
-        "name": "Visuals", "max_score": 5, "weight": 0.05, "descriptors": ["..."]
+        "name": "Visuals",
+        "max_score": 5,
+        "weight": 0.05,
+        "descriptors": [
+            "1: Unwatchable. Visually incoherent or ugly.",
+            "2: Poor. Amateurish, clumsy, or cheap-looking.",
+            "3: Competent. Standard and functional, but not memorable.",
+            "4: Strong. A distinct and well-executed visual style.",
+            "5: Stunning. Breathtaking, innovative; every frame a painting."
+        ]
     },
     {
-        "name": "Effects", "max_score": 5, "weight": 0.05, "descriptors": ["..."]
+        "name": "Effects",
+        "max_score": 5,
+        "weight": 0.05,
+        "descriptors": [
+            "1: Abysmal. Laughably bad, shatters immersion.",
+            "2: Poor. Unconvincing, cheap, or out of place.",
+            "3: Serviceable. Gets the job done but lacks polish.",
+            "4: Very Good. Convincing and well-integrated.",
+            "5: Seamless. Flawless, completely believable."
+        ]
     },
     {
-        "name": "Length", "max_score": 5, "weight": 0.08, "descriptors": ["..."]
+        "name": "Length",
+        "max_score": 5,
+        "weight": 0.08,
+        "descriptors": [
+            "1: Terribly Judged. Grotesquely bloated or brutally short.",
+            "2: Poorly Judged. Noticeably too long or too short.",
+            "3: Serviceable. Okay, but could be trimmed or use an extra scene.",
+            "4: Good. Well-judged runtime, feels appropriate.",
+            "5: Perfect. The absolute ideal length for the story."
+        ]
     },
     {
-        "name": "Pacing", "max_score": 5, "weight": 0.08, "descriptors": ["..."]
+        "name": "Pacing",
+        "max_score": 5,
+        "weight": 0.08,
+        "descriptors": [
+            "1: Excruciating. The flow is completely broken; a chore to watch.",
+            "2: Uneven. Inconsistent, with noticeable lulls or frantic sections.",
+            "3: Acceptable. Generally fine, but with some sections that drag or feel rushed.",
+            "4: Well-Paced. Good, steady rhythm that keeps you engaged.",
+            "5: Masterful. Expertly controlled rhythm and flow."
+        ]
     },
     {
-        "name": "Potential (World/Lore)", "max_score": 5, "weight": 0.03, "descriptors": ["..."]
+        "name": "Potential (World/Lore)",
+        "max_score": 5,
+        "weight": 0.03,
+        "descriptors": [
+            "1: Shallow & Uninspired. Feels like a cardboard cutout.",
+            "2: Hollow Lore. Gestures at depth, but threads are dull.",
+            "3: Sufficiently Built. Adequate for the plot, but not fascinating.",
+            "4: Genuinely Intriguing. Raises compelling questions, makes you want more.",
+            "5: Rich & Compelling Universe. Feels layered and real, sparks the imagination."
+        ]
     },
     {
-        "name": "Cast (Casting & Role Fit)", "max_score": 6, "weight": 0.05, "descriptors": ["..."]
+        "name": "Cast (Casting & Role Fit)",
+        "max_score": 6,
+        "weight": 0.05,
+        "descriptors": [
+            "1: Completely Miscast. Distractingly wrong for the role in every way.",
+            "2: Persistent Mismatch. Generally feels out of place; hard to believe.",
+            "3: Right Look, Wrong Fit. Looks the part but fails to act it.",
+            "4: Performance Transcends Look. Overcomes a visual mismatch with a great performance.",
+            "5: Strong Fit. A great choice where everything works.",
+            "6: Perfect / Iconic Casting. Impossible to imagine anyone else in the role."
+        ]
     },
     {
         "name": "Action",
@@ -101,116 +231,131 @@ CATEGORY_DEFINITIONS = [
     }
 ]
 
-# --- HELPER FUNCTIONS (Adapted from your classes) ---
 
-def calculate_score(ratings):
-    """
-    Calculates the final movie score based on collected ratings.
-    'ratings' is a dictionary like: {'Story/Plot': 7, 'Action': None, ...}
-    """
-    total_weighted_score = 0.0
-    total_weight_used = 0.0
+# --- CORE LOGIC CLASSES ---
+# These classes handle the data and calculations, separated from the UI.
 
-    for category_data in CATEGORY_DEFINITIONS:
-        name = category_data['name']
-        user_rating = ratings.get(name) # Safely get the rating
+class Category:
+    """An object representing a single rating category with its data."""
+    def __init__(self, name, max_score, weight, user_rating):
+        self.name = name
+        self.max_score = max_score
+        self.weight = weight
+        self.user_rating = user_rating
 
-        if user_rating is not None:
-            max_score = category_data['max_score']
-            weight = category_data['weight']
+class MovieRater:
+    """The main controller that calculates the final score."""
+    def __init__(self, categories):
+        self.categories = categories
+        self.final_score = 0.0
 
-            # Normalize the score to a 0-1 scale
-            normalized_score = (user_rating - 1) / (max_score - 1) if max_score > 1 else 0
+    def calculate_score(self):
+        """Calculates the final movie score based on all collected ratings."""
+        total_weighted_score = 0.0
+        total_weight_used = 0.0
 
-            total_weighted_score += normalized_score * weight
-            total_weight_used += weight
+        for category in self.categories:
+            if category.user_rating is not None:
+                # Normalize the score to a 0-1 scale
+                normalized_score = (category.user_rating - 1) / (category.max_score - 1)
+                
+                # Add the weighted score and weight to their respective totals
+                total_weighted_score += normalized_score * category.weight
+                total_weight_used += category.weight
+        
+        if total_weight_used > 0:
+            # Calculate the final score and scale it to 10
+            self.final_score = (total_weighted_score / total_weight_used) * 10
+        else:
+            self.final_score = 0.0
+        
+        return self.final_score, self.categories
 
-    if total_weight_used > 0:
-        final_score = (total_weighted_score / total_weight_used) * 10
-    else:
-        final_score = 0.0
 
-    return final_score
+# --- STREAMLIT APP LAYOUT AND LOGIC ---
 
+st.set_page_config(page_title="LENS Movie Rater", page_icon="🎥", layout="centered")
 
-# --- STREAMLIT APP LAYOUT ---
+# --- Title and Introduction ---
+st.title("The LENS Movie Rating System 🎥")
+st.markdown("> *The Logical & Editorial Narrative Scrutiny (LENS) Scale*")
+st.markdown("A comprehensive framework for cinematic evaluation that brings focus to film criticism.")
+st.divider()
 
-# Replaces `print("Welcome...")`
-st.set_page_config(page_title="Custom Movie Rater", layout="wide")
-st.title("🎬 Custom Movie Rater")
-st.write("Rate a movie across multiple categories to generate a precise, weighted final score.")
-
-# Use st.session_state to store ratings across reruns
+# --- Initialize session_state to hold ratings ---
 if 'ratings' not in st.session_state:
     st.session_state.ratings = {}
 
-# This replaces the `collect_all_ratings` method loop
-for category in CATEGORY_DEFINITIONS:
-    name = category['name']
-    max_score = category['max_score']
+# --- Dynamically create sliders for each category ---
+for category_data in CATEGORY_DEFINITIONS:
+    name = category_data["name"]
+    max_score = category_data["max_score"]
     
     st.subheader(name)
 
-    # Use an expander to hide the long descriptor list, making the UI cleaner
-    # This replaces `print(desc)`
-    with st.expander("Show/Hide Scoring Guide"):
-        for desc in category['descriptors']:
-            st.write(desc)
-    
-    # This is the replacement for `input()` and the special 'N' logic
+    # Use an expander to hide the detailed descriptions, keeping the UI clean
+    with st.expander("Show/Hide Rating Descriptions"):
+        for desc in category_data["descriptors"]:
+            st.write(f" - {desc}")
+
+    # Special handling for the "Action" category
     if name == "Action":
-        # For the 'Action' category, we first ask if there is any action
-        has_action = st.checkbox("Does this movie have action sequences?", key=f"has_{name}")
-        if has_action:
-            # If yes, show a slider to rate it
-            # The 'key' is crucial for Streamlit to uniquely identify each widget
-            st.session_state.ratings[name] = st.slider(
-                f"Your rating (1-{max_score})", 1, max_score, key=name
-            )
-        else:
-            # If no, we store None, just like typing 'N' in the original script
+        no_action = st.checkbox("This movie has no action.", key=f"no_action_{name}")
+        if no_action:
+            # If checkbox is ticked, store None for this rating
             st.session_state.ratings[name] = None
-            st.info("Action category will be excluded from the final score.")
+        else:
+            # Otherwise, show the slider and store its value
+            st.session_state.ratings[name] = st.slider(
+                f"Rate {name}", 1, max_score, value=(max_score // 2 + 1), key=f"rating_{name}"
+            )
     else:
-        # For all other categories, just show the slider
+        # Standard slider for all other categories
         st.session_state.ratings[name] = st.slider(
-            f"Your rating (1-{max_score})", 1, max_score, key=name
+            f"Rate {name}", 1, max_score, value=(max_score // 2 + 1), key=f"rating_{name}"
         )
-    
-    st.markdown("---") # Adds a visual separator
 
-# --- CALCULATION AND DISPLAY ---
+    st.divider()
 
-# A button to trigger the calculation and display the summary
-if st.button("✨ Calculate Final Score", use_container_width=True):
-    # Retrieve all the ratings the user has entered from the session state
-    user_ratings = st.session_state.ratings
 
-    # Calculate the score using our helper function
-    final_score = calculate_score(user_ratings)
+# --- Calculation and Display ---
+if st.button("Calculate Final Score", type="primary", use_container_width=True):
+    # Create Category objects from the ratings stored in session_state
+    rated_categories = []
+    for cat_def in CATEGORY_DEFINITIONS:
+        cat_name = cat_def["name"]
+        user_rating = st.session_state.ratings.get(cat_name)
+        rated_categories.append(
+            Category(
+                name=cat_name,
+                max_score=cat_def["max_score"],
+                weight=cat_def["weight"],
+                user_rating=user_rating
+            )
+        )
 
-    # This section replaces the `display_summary` method
-    st.header("🏆 Movie Rating Summary")
-    
-    # Using columns for a nicer layout
+    # Use the MovieRater class to perform the calculation
+    rater = MovieRater(rated_categories)
+    final_score, summary_categories = rater.calculate_score()
+
+    # Display the final score prominently
+    st.header("🏆 Final Movie Score")
+    st.metric(label="LENS Score", value=f"{final_score:.2f} / 10.0")
+
+    st.header("📊 Rating Summary")
+
+    # Display a clean, two-column summary of the user's ratings
     col1, col2 = st.columns(2)
-
+    
+    # Split categories for two-column layout
+    mid_point = len(summary_categories) // 2 + 1
+    
     with col1:
-        st.subheader("Your Ratings")
-        for category in CATEGORY_DEFINITIONS:
-            name = category['name']
-            rating = user_ratings.get(name)
-            rating_display = str(rating) if rating is not None else "N/A (No Action)"
-            st.markdown(f"**{name}:** {rating_display}")
+        for category in summary_categories[:mid_point]:
+            rating_display = str(category.user_rating) if category.user_rating is not None else "N/A"
+            st.markdown(f"**{category.name}:** {rating_display}")
 
     with col2:
-        st.subheader("Final Score")
-        # st.metric is a great way to display a key number
-        st.metric(
-            label="Calculated Movie Score",
-            value=f"{final_score:.1f} / 10.0",
-            help="Score is calculated based on your weighted ratings."
-        )
-        # A progress bar provides a nice visual
-        st.progress(final_score / 10.0)
-        st.success("Calculation complete! See the breakdown on the left.")
+        for category in summary_categories[mid_point:]:
+            rating_display = str(category.user_rating) if category.user_rating is not None else "N/A"
+            st.markdown(f"**{category.name}:** {rating_display}")
