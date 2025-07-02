@@ -310,6 +310,7 @@ st.title("The LENS Movie Rating System 🎥")
 st.markdown("> *The Logical & Editorial Narrative Scrutiny (LENS) Scale*")
 st.markdown("A comprehensive framework for cinematic evaluation that brings focus to film criticism.")
 st.markdown("🖋️ In the modern discourse of film, meaningful critique is too often lost in a sea of reductive scores and unchecked personal bias. The LENS scale was conceived as a corrective, comprehensive and all-encompassing standard for cinematic evaluation.")
+st.markdown("https://github.com/LevonAronian/The-LENS-Scale/tree/main")
 st.divider()
 
 # --- Initialize session_state to hold ratings ---
