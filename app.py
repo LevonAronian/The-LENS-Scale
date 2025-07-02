@@ -1,24 +1,38 @@
 import streamlit as st
 from streamlit.components.v1 import html
 
+# ==============================================================================
+# 1. CORE FUNCTIONS & STATE MANAGEMENT (Place at the top)
+# ==============================================================================
+
+def reset_ratings():
+    """
+    This function is called when the 'Reset Ratings' button is clicked.
+    It clears all values from the session state and sets a flag to trigger a scroll.
+    """
+    st.session_state.clear()
+    st.session_state.scroll_to_top = True
+
+# This block runs on every script rerun. It checks for the scroll flag.
 if "scroll_to_top" in st.session_state:
-    # We use a multi-line string with a <script> tag that contains JavaScript.
-    # setTimeout tells the browser to wait 50 milliseconds before running the
-    # command, which is enough time for Streamlit to finish re-drawing the page.
+    # We inject JavaScript that targets the PARENT window (the main browser window)
+    # and tells it to scroll to the top.
     st.components.v1.html(
         """
         <script>
-            setTimeout(function() {
-                window.scrollTo(0, 0);
-            }, 50);
+            window.parent.scrollTo(0, 0);
         </script>
         """,
         height=0
     )
-    # Important: Delete the flag after running the script to avoid scrolling on every interaction.
+    # After scrolling, we delete the flag to prevent it from running again.
     del st.session_state.scroll_to_top
-# --- ALL YOUR CATEGORY DATA IS STORED HERE ---
-# (This data is unchanged)
+
+
+# ==============================================================================
+# 2. DATA DEFINITIONS
+# ==============================================================================
+
 CATEGORY_DEFINITIONS = [
     {
         "name": "Story/Plot",
@@ -266,8 +280,10 @@ CATEGORY_DEFINITIONS = [
 ]
 
 
-# --- CORE LOGIC CLASSES ---
-# (Unchanged)
+# ==============================================================================
+# 3. CORE LOGIC CLASSES
+# ==============================================================================
+
 class Category:
     """An object representing a single rating category with its data."""
     def __init__(self, name, max_score, weight, user_rating):
@@ -288,16 +304,13 @@ class MovieRater:
         total_weight_used = 0.0
 
         for category in self.categories:
-            if category.user_rating is not None:
+            if category.user_rating is not None and category.max_score > 1:
                 # Normalize the score to a 0-1 scale
                 normalized_score = (category.user_rating - 1) / (category.max_score - 1)
-
-                # Add the weighted score and weight to their respective totals
                 total_weighted_score += normalized_score * category.weight
                 total_weight_used += category.weight
 
         if total_weight_used > 0:
-            # Calculate the final score and scale it to 10
             self.final_score = (total_weighted_score / total_weight_used) * 10
         else:
             self.final_score = 0.0
@@ -305,21 +318,20 @@ class MovieRater:
         return self.final_score, self.categories
 
 
-# --- STREAMLIT APP LAYOUT AND LOGIC ---
+# ==============================================================================
+# 4. STREAMLIT APP LAYOUT
+# ==============================================================================
 
 st.set_page_config(page_title="LENS Movie Rater", page_icon="🎥", layout="centered")
 
-# --- Title and Introduction ---
 st.title("The LENS Movie Rating System 🎥")
 st.markdown("> *The Logical & Editorial Narrative Scrutiny (LENS) Scale*")
 st.markdown("A comprehensive framework for cinematic evaluation that brings focus to film criticism.")
 st.markdown("🖋️ In the modern discourse of film, meaningful critique is too often lost in a sea of reductive scores and unchecked personal bias. The LENS scale was conceived as a corrective, comprehensive and all-encompassing standard for cinematic evaluation.")
-st.markdown("https://github.com/LevonAronian/The-LENS-Scale/tree/main")
 st.divider()
 
-# --- THE FIX: Initialize the 'ratings' dictionary here ---
-# This check runs every time. If 'ratings' was deleted by st.session_state.clear(),
-# this will re-create it as an empty dictionary, preventing the error.
+# This safety check is essential. After `st.session_state.clear()` runs,
+# the 'ratings' dictionary is gone. This line re-creates it.
 if 'ratings' not in st.session_state:
     st.session_state.ratings = {}
 
@@ -327,12 +339,15 @@ if 'ratings' not in st.session_state:
 for category_data in CATEGORY_DEFINITIONS:
     name = category_data["name"]
     max_score = category_data["max_score"]
-
     st.subheader(name)
 
     with st.expander("Show/Hide Rating Descriptions"):
         for desc in category_data["descriptors"]:
             st.write(f" - {desc}")
+
+    # Use the `key` parameter to link the widget's state directly to our dictionary
+    # This also helps persist the state across reruns
+    widget_key = f"rating_{name}"
 
     if name == "Action":
         no_action = st.checkbox("This movie has no action.", key=f"no_action_{name}")
@@ -340,18 +355,16 @@ for category_data in CATEGORY_DEFINITIONS:
             st.session_state.ratings[name] = None
         else:
             st.session_state.ratings[name] = st.slider(
-                f"Rate {name}", 1, max_score, value=(max_score // 2 + 1), key=f"rating_{name}"
+                f"Rate {name}", 1, max_score, value=(max_score // 2 + 1), key=widget_key
             )
     else:
         st.session_state.ratings[name] = st.slider(
-            f"Rate {name}", 1, max_score, value=(max_score // 2 + 1), key=f"rating_{name}"
+            f"Rate {name}", 1, max_score, value=(max_score // 2 + 1), key=widget_key
         )
 
     st.divider()
 
-
-# --- Calculation and Display ---
-# (Unchanged)
+# --- Calculation and Display Section ---
 if st.button("Calculate Final Score", type="primary", use_container_width=True):
     rated_categories = []
     for cat_def in CATEGORY_DEFINITIONS:
@@ -371,7 +384,6 @@ if st.button("Calculate Final Score", type="primary", use_container_width=True):
 
     st.header("🏆 Final Movie Score")
     st.metric(label="LENS Score", value=f"{final_score:.1f} / 10.0")
-
     st.header("📊 Rating Summary")
     col1, col2 = st.columns(2)
     mid_point = len(summary_categories) // 2 + 1
@@ -386,11 +398,6 @@ if st.button("Calculate Final Score", type="primary", use_container_width=True):
             rating_display = str(category.user_rating) if category.user_rating is not None else "N/A"
             st.markdown(f"**{category.name}:** {rating_display}")
 
-# --- Reset Button with Scroll to Top ---
-# (This logic is now correct and complete)
-st.divider()
-
-if st.button("Reset Ratings", use_container_width=True):
-    st.session_state.clear()
-    st.session_state.scroll_to_top = True
-    st.rerun()
+# --- Final Reset Button ---
+# We use `on_click` to call our callback function. This is the most reliable method.
+st.button("Reset Ratings", use_container_width=True, on_click=reset_ratings)
