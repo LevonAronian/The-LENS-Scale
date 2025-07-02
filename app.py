@@ -212,7 +212,7 @@ CATEGORY_DEFINITIONS = [
         ]
     },
     {
-        "name": "Cast (Casting & Role Fit(look and personality)",
+        "name": "Cast (Casting & Role Fit(look and personality))",
         "max_score": 6,
         "weight": 0.05,
         "descriptors": [
