@@ -6,7 +6,7 @@ CATEGORY_DEFINITIONS = [
     {
         "name": "Story/Plot",
         "max_score": 10,
-        "weight": 0.16,
+        "weight": 0.14,
         "descriptors": [
             "1: Incoherent. A complete mess with no discernible structure or purpose.",
             "2: Barely Functional. The plot is technically present but is illogical, confusing, and almost impossible to follow.",
@@ -21,7 +21,7 @@ CATEGORY_DEFINITIONS = [
         ]
     },
     {
-        "name": "Acting",
+        "name": "Acting (Leading roles)",
         "max_score": 10,
         "weight": 0.08,
         "descriptors": [
@@ -38,9 +38,26 @@ CATEGORY_DEFINITIONS = [
         ]
     },
     {
-        "name": "Soundtrack",
+        "name": "Acting (Supporting roles)",
         "max_score": 10,
-        "weight": 0.08,
+        "weight": 0.05,
+        "descriptors": [
+            "1: Unwatchable. The performance is so bad it's embarrassing and ruins every scene.",
+            "2: Amateurish. The actor is clearly out of their depth, breaking the illusion of the film.",
+            "3: Consistently Weak. An unbelievable or wooden performance that undermines the character's credibility.",
+            "4: Flat / One-Note. The actor shows little to no emotional range, making the character feel lifeless.",
+            "5: Inconsistent. A mix of good and bad moments, where the actor fails to maintain a believable character throughout.",
+            "6: Competent. The actor is believable in the role and delivers their lines effectively. A professional job.",
+            "7: Good. A solid performance with clear emotional depth that makes the character feel real.",
+            "8: Excellent. A charismatic, nuanced, and memorable performance that elevates the material.",
+            "9: Powerful. A truly commanding and deeply moving performance that is a highlight of the film.",
+            "10: Flawless / Iconic. A transcendent performance that becomes the definitive portrayal of that character."
+        ]
+    },
+    {
+        "name": "Soundtrack (Quality and Fit)",
+        "max_score": 10,
+        "weight": 0.06,
         "descriptors": [
             "1: Detrimental. The music is actively annoying or so inappropriate it sabotages the film's mood.",
             "2: Poor. A distracting or badly implemented soundtrack that consistently takes you out of the movie.",
@@ -57,7 +74,7 @@ CATEGORY_DEFINITIONS = [
     {
         "name": "Plotholes",
         "max_score": 10,
-        "weight": 0.05,
+        "weight": 0.07,
         "descriptors": [
             "1: Completely Broken. The film's logic is so flawed it is fundamentally nonsensical.",
             "2: Riddled with Story-Breaking Holes. Massive contradictions that make the entire plot fall apart.",
@@ -72,9 +89,9 @@ CATEGORY_DEFINITIONS = [
         ]
     },
     {
-        "name": "Tonality",
+        "name": "Tonality (Fit and Consistency)",
         "max_score": 10,
-        "weight": 0.08,
+        "weight": 0.07,
         "descriptors": [
             "1: Incoherent Whiplash. Jarring, chaotic shifts between incompatible tones.",
             "2: Frequently Confused. Significant tonal shifts that feel amateurishly handled.",
@@ -106,9 +123,9 @@ CATEGORY_DEFINITIONS = [
         ]
     },
     {
-        "name": "Expectation",
+        "name": "Expectation (Personal + What the Movie sets for itself)",
         "max_score": 10,
-        "weight": 0.05,
+        "weight": 0.04,
         "descriptors": [
             "1: Colossal Disappointment. Failed on all fronts.",
             "2: A Bait-and-Switch. Fundamentally misrepresented itself.",
@@ -123,9 +140,9 @@ CATEGORY_DEFINITIONS = [
         ]
     },
     {
-        "name": "Audio",
+        "name": "Audio (Sound effects and Quality)",
         "max_score": 5,
-        "weight": 0.05,
+        "weight": 0.06,
         "descriptors": [
             "1: Unusable. Ruins the viewing experience.",
             "2: Poor. Persistent issues that pull you out of the movie.",
@@ -135,9 +152,9 @@ CATEGORY_DEFINITIONS = [
         ]
     },
     {
-        "name": "Visuals",
+        "name": "Visuals (Realism and Interest/Intrigue)",
         "max_score": 5,
-        "weight": 0.05,
+        "weight": 0.06,
         "descriptors": [
             "1: Unwatchable. Visually incoherent or ugly.",
             "2: Poor. Amateurish, clumsy, or cheap-looking.",
@@ -147,7 +164,7 @@ CATEGORY_DEFINITIONS = [
         ]
     },
     {
-        "name": "Effects",
+        "name": "Effects (Visual and Special)",
         "max_score": 5,
         "weight": 0.05,
         "descriptors": [
@@ -161,7 +178,7 @@ CATEGORY_DEFINITIONS = [
     {
         "name": "Length",
         "max_score": 5,
-        "weight": 0.08,
+        "weight": 0.07,
         "descriptors": [
             "1: Terribly Judged. Grotesquely bloated or brutally short.",
             "2: Poorly Judged. Noticeably too long or too short.",
@@ -173,7 +190,7 @@ CATEGORY_DEFINITIONS = [
     {
         "name": "Pacing",
         "max_score": 5,
-        "weight": 0.08,
+        "weight": 0.07,
         "descriptors": [
             "1: Excruciating. The flow is completely broken; a chore to watch.",
             "2: Uneven. Inconsistent, with noticeable lulls or frantic sections.",
@@ -183,7 +200,7 @@ CATEGORY_DEFINITIONS = [
         ]
     },
     {
-        "name": "Potential (World/Lore)",
+        "name": "Potential (Subplot quality/interest as well as amount to explore)",
         "max_score": 5,
         "weight": 0.03,
         "descriptors": [
@@ -195,7 +212,7 @@ CATEGORY_DEFINITIONS = [
         ]
     },
     {
-        "name": "Cast (Casting & Role Fit)",
+        "name": "Cast (Casting & Role Fit(look and personality)",
         "max_score": 6,
         "weight": 0.05,
         "descriptors": [
@@ -220,9 +237,9 @@ CATEGORY_DEFINITIONS = [
         ]
     },
     {
-        "name": "Personal Enjoyment",
+        "name": "Personal Enjoyment (Individuals Overall Score)",
         "max_score": 10,
-        "weight": 0.03,
+        "weight": 0.02,
         "descriptors": [
             "This is your personal gut-check score from 1-10.",
             "1: Hated it.",
