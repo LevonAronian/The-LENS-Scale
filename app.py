@@ -1,19 +1,14 @@
 import streamlit as st
-from streamlit.components.v1 import html # It's good practice to import it
+from streamlit.components.v1 import html
 
-### MODIFICATION 1: ADD THIS BLOCK AT THE VERY TOP OF YOUR SCRIPT ###
-# This logic runs on every script rerun. It checks if the "scroll_to_top" flag
-# was set by the reset button on the PREVIOUS run.
+# This is the scroll-to-top logic. It works correctly.
 if "scroll_to_top" in st.session_state:
-    # If the flag exists, we inject the JavaScript to scroll to the top
     st.components.v1.html("<script>window.scrollTo(0, 0);</script>", height=0)
-    # Then, we immediately delete the flag so it doesn't scroll on every single
-    # interaction (like moving a slider).
     del st.session_state.scroll_to_top
 
 
 # --- ALL YOUR CATEGORY DATA IS STORED HERE ---
-# (This data is unchanged from your original script)
+# (This data is unchanged)
 CATEGORY_DEFINITIONS = [
     {
         "name": "Story/Plot",
@@ -262,8 +257,7 @@ CATEGORY_DEFINITIONS = [
 
 
 # --- CORE LOGIC CLASSES ---
-# These classes handle the data and calculations, separated from the UI.
-
+# (Unchanged)
 class Category:
     """An object representing a single rating category with its data."""
     def __init__(self, name, max_score, weight, user_rating):
@@ -313,9 +307,11 @@ st.markdown("🖋️ In the modern discourse of film, meaningful critique is too
 st.markdown("https://github.com/LevonAronian/The-LENS-Scale/tree/main")
 st.divider()
 
-# --- Initialize session_state to hold ratings ---
-# Note: We no longer need to check for 'ratings' as st.session_state.clear() removes everything.
-# The sliders will repopulate the state on the next run anyway.
+# --- THE FIX: Initialize the 'ratings' dictionary here ---
+# This check runs every time. If 'ratings' was deleted by st.session_state.clear(),
+# this will re-create it as an empty dictionary, preventing the error.
+if 'ratings' not in st.session_state:
+    st.session_state.ratings = {}
 
 # --- Dynamically create sliders for each category ---
 for category_data in CATEGORY_DEFINITIONS:
@@ -324,24 +320,19 @@ for category_data in CATEGORY_DEFINITIONS:
 
     st.subheader(name)
 
-    # Use an expander to hide the detailed descriptions, keeping the UI clean
     with st.expander("Show/Hide Rating Descriptions"):
         for desc in category_data["descriptors"]:
             st.write(f" - {desc}")
 
-    # Special handling for the "Action" category
     if name == "Action":
         no_action = st.checkbox("This movie has no action.", key=f"no_action_{name}")
         if no_action:
-            # If checkbox is ticked, store None for this rating
             st.session_state.ratings[name] = None
         else:
-            # Otherwise, show the slider and store its value
             st.session_state.ratings[name] = st.slider(
                 f"Rate {name}", 1, max_score, value=(max_score // 2 + 1), key=f"rating_{name}"
             )
     else:
-        # Standard slider for all other categories
         st.session_state.ratings[name] = st.slider(
             f"Rate {name}", 1, max_score, value=(max_score // 2 + 1), key=f"rating_{name}"
         )
@@ -350,13 +341,9 @@ for category_data in CATEGORY_DEFINITIONS:
 
 
 # --- Calculation and Display ---
+# (Unchanged)
 if st.button("Calculate Final Score", type="primary", use_container_width=True):
-    # Create Category objects from the ratings stored in session_state
     rated_categories = []
-    # Ensure 'ratings' key exists before trying to access it
-    if 'ratings' not in st.session_state:
-        st.session_state.ratings = {}
-
     for cat_def in CATEGORY_DEFINITIONS:
         cat_name = cat_def["name"]
         user_rating = st.session_state.ratings.get(cat_name)
@@ -369,20 +356,14 @@ if st.button("Calculate Final Score", type="primary", use_container_width=True):
             )
         )
 
-    # Use the MovieRater class to perform the calculation
     rater = MovieRater(rated_categories)
     final_score, summary_categories = rater.calculate_score()
 
-    # Display the final score prominently
     st.header("🏆 Final Movie Score")
     st.metric(label="LENS Score", value=f"{final_score:.1f} / 10.0")
 
     st.header("📊 Rating Summary")
-
-    # Display a clean, two-column summary of the user's ratings
     col1, col2 = st.columns(2)
-
-    # Split categories for two-column layout
     mid_point = len(summary_categories) // 2 + 1
 
     with col1:
@@ -395,16 +376,11 @@ if st.button("Calculate Final Score", type="primary", use_container_width=True):
             rating_display = str(category.user_rating) if category.user_rating is not None else "N/A"
             st.markdown(f"**{category.name}:** {rating_display}")
 
-### MODIFICATION 2: REPLACE YOUR OLD RESET BUTTON LOGIC WITH THIS ###
+# --- Reset Button with Scroll to Top ---
+# (This logic is now correct and complete)
 st.divider()
 
 if st.button("Reset Ratings", use_container_width=True):
-    # 1. Clear all the stored values in the session state.
     st.session_state.clear()
-    
-    # 2. Set our "scroll_to_top" flag. This tells the *next* script run
-    #    that it needs to perform the scroll action.
     st.session_state.scroll_to_top = True
-    
-    # 3. Trigger an immediate rerun of the script. This is essential.
     st.rerun()
