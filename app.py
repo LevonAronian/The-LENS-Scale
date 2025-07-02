@@ -275,17 +275,17 @@ class MovieRater:
             if category.user_rating is not None:
                 # Normalize the score to a 0-1 scale
                 normalized_score = (category.user_rating - 1) / (category.max_score - 1)
-                
+
                 # Add the weighted score and weight to their respective totals
                 total_weighted_score += normalized_score * category.weight
                 total_weight_used += category.weight
-        
+
         if total_weight_used > 0:
             # Calculate the final score and scale it to 10
             self.final_score = (total_weighted_score / total_weight_used) * 10
         else:
             self.final_score = 0.0
-        
+
         return self.final_score, self.categories
 
 
@@ -307,7 +307,7 @@ if 'ratings' not in st.session_state:
 for category_data in CATEGORY_DEFINITIONS:
     name = category_data["name"]
     max_score = category_data["max_score"]
-    
+
     st.subheader(name)
 
     # Use an expander to hide the detailed descriptions, keeping the UI clean
@@ -357,16 +357,17 @@ if st.button("Calculate Final Score", type="primary", use_container_width=True):
 
     # Display the final score prominently
     st.header("🏆 Final Movie Score")
-    st.metric(label="LENS Score", value=f"{final_score:.2f} / 10.0")
+    # --- MODIFICATION 1: Changed the format string from .2f to .1f ---
+    st.metric(label="LENS Score", value=f"{final_score:.1f} / 10.0")
 
     st.header("📊 Rating Summary")
 
     # Display a clean, two-column summary of the user's ratings
     col1, col2 = st.columns(2)
-    
+
     # Split categories for two-column layout
     mid_point = len(summary_categories) // 2 + 1
-    
+
     with col1:
         for category in summary_categories[:mid_point]:
             rating_display = str(category.user_rating) if category.user_rating is not None else "N/A"
@@ -376,3 +377,14 @@ if st.button("Calculate Final Score", type="primary", use_container_width=True):
         for category in summary_categories[mid_point:]:
             rating_display = str(category.user_rating) if category.user_rating is not None else "N/A"
             st.markdown(f"**{category.name}:** {rating_display}")
+
+# --- ADDITION 2: Added a Reset button at the bottom of the app ---
+st.divider() # Add a small divider for visual separation
+
+if st.button("Reset Ratings", use_container_width=True):
+    # A simple way to reset is to clear the entire session state.
+    # This will remove all stored slider values and checkbox states.
+    st.session_state.clear()
+    # Rerun the app from the top.
+    # This ensures the page reloads with all widgets in their default state.
+    st.rerun()
