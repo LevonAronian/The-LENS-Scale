@@ -1,6 +1,17 @@
 import streamlit as st
 from streamlit.components.v1 import html # It's good practice to import it
 
+### MODIFICATION 1: ADD THIS BLOCK AT THE VERY TOP OF YOUR SCRIPT ###
+# This logic runs on every script rerun. It checks if the "scroll_to_top" flag
+# was set by the reset button on the PREVIOUS run.
+if "scroll_to_top" in st.session_state:
+    # If the flag exists, we inject the JavaScript to scroll to the top
+    st.components.v1.html("<script>window.scrollTo(0, 0);</script>", height=0)
+    # Then, we immediately delete the flag so it doesn't scroll on every single
+    # interaction (like moving a slider).
+    del st.session_state.scroll_to_top
+
+
 # --- ALL YOUR CATEGORY DATA IS STORED HERE ---
 # (This data is unchanged from your original script)
 CATEGORY_DEFINITIONS = [
@@ -302,8 +313,8 @@ st.markdown("🖋️ In the modern discourse of film, meaningful critique is too
 st.divider()
 
 # --- Initialize session_state to hold ratings ---
-if 'ratings' not in st.session_state:
-    st.session_state.ratings = {}
+# Note: We no longer need to check for 'ratings' as st.session_state.clear() removes everything.
+# The sliders will repopulate the state on the next run anyway.
 
 # --- Dynamically create sliders for each category ---
 for category_data in CATEGORY_DEFINITIONS:
@@ -341,6 +352,10 @@ for category_data in CATEGORY_DEFINITIONS:
 if st.button("Calculate Final Score", type="primary", use_container_width=True):
     # Create Category objects from the ratings stored in session_state
     rated_categories = []
+    # Ensure 'ratings' key exists before trying to access it
+    if 'ratings' not in st.session_state:
+        st.session_state.ratings = {}
+
     for cat_def in CATEGORY_DEFINITIONS:
         cat_name = cat_def["name"]
         user_rating = st.session_state.ratings.get(cat_name)
@@ -379,13 +394,16 @@ if st.button("Calculate Final Score", type="primary", use_container_width=True):
             rating_display = str(category.user_rating) if category.user_rating is not None else "N/A"
             st.markdown(f"**{category.name}:** {rating_display}")
 
-# --- MODIFIED SECTION: Reset Button with Scroll to Top ---
+### MODIFICATION 2: REPLACE YOUR OLD RESET BUTTON LOGIC WITH THIS ###
 st.divider()
 
 if st.button("Reset Ratings", use_container_width=True):
-    # This injects a small piece of JavaScript into the app.
-    # The script tells the browser to scroll to the top of the page (x=0, y=0).
-    st.components.v1.html("<script>window.scrollTo(0, 0);</script>", height=0)
-
-    # Clear all the stored values in the session state.
+    # 1. Clear all the stored values in the session state.
     st.session_state.clear()
+    
+    # 2. Set our "scroll_to_top" flag. This tells the *next* script run
+    #    that it needs to perform the scroll action.
+    st.session_state.scroll_to_top = True
+    
+    # 3. Trigger an immediate rerun of the script. This is essential.
+    st.rerun()
