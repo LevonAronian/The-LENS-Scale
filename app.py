@@ -1,12 +1,22 @@
 import streamlit as st
 from streamlit.components.v1 import html
 
-# This is the scroll-to-top logic. It works correctly.
 if "scroll_to_top" in st.session_state:
-    st.components.v1.html("<script>window.scrollTo(0, 0);</script>", height=0)
+    # We use a multi-line string with a <script> tag that contains JavaScript.
+    # setTimeout tells the browser to wait 50 milliseconds before running the
+    # command, which is enough time for Streamlit to finish re-drawing the page.
+    st.components.v1.html(
+        """
+        <script>
+            setTimeout(function() {
+                window.scrollTo(0, 0);
+            }, 50);
+        </script>
+        """,
+        height=0
+    )
+    # Important: Delete the flag after running the script to avoid scrolling on every interaction.
     del st.session_state.scroll_to_top
-
-
 # --- ALL YOUR CATEGORY DATA IS STORED HERE ---
 # (This data is unchanged)
 CATEGORY_DEFINITIONS = [
