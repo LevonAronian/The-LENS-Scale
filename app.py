@@ -1,47 +1,3 @@
-Of course! This is a great question and a common challenge in web apps. The browser remembers your scroll position, but you want to override that behavior when the reset button is clicked.
-
-You can achieve this by injecting a small piece of JavaScript that tells the browser to scroll to the top of the page. The best way to do this in Streamlit is with the `st.components.v1.html` function.
-
-### The Short Answer
-
-Replace your existing "Reset Ratings" button logic with this:
-
-```python
-# --- Reset Button with Scroll to Top ---
-st.divider()
-
-if st.button("Reset Ratings", use_container_width=True):
-    # This injects a small piece of JavaScript into the app.
-    # The script tells the browser to scroll to the top of the page (x=0, y=0).
-    st.components.v1.html("<script>window.scrollTo(0, 0);</script>", height=0)
-
-    # Clear all the stored values in the session state.
-    st.session_state.clear()
-
-    # We don't need st.rerun() here. After clearing the state,
-    # Streamlit will automatically rerun the script from the top on the next
-    # interaction, and the widgets will be reset to their default values.
-    # The scroll command will have already been executed by the browser.
-```
-
-### Explanation of the Change
-
-1.  **`st.components.v1.html("<script>window.scrollTo(0, 0);</script>", height=0)`**: This is the key line.
-    *   `st.components.v1.html()` is a function that lets you safely render a block of raw HTML (and in this case, a JavaScript `<script>` tag) within your Streamlit app.
-    *   `window.scrollTo(0, 0)` is the JavaScript command to scroll the browser window to the very top-left corner (pixel 0 horizontally, pixel 0 vertically).
-    *   `height=0` ensures that the HTML component itself doesn't take up any visible space on the page.
-
-2.  **Order of Operations**: We place the scroll command *before* clearing the state. When you click the button, Streamlit runs this block of code. It sends the JavaScript command to the browser, which executes it immediately, and *then* it clears the session state. Streamlit's natural behavior after a button press is to rerun the script, which will now redraw all your sliders at their default values because the state is empty. The page will already be at the top.
-
-3.  **Removed `st.rerun()`**: I removed `st.rerun()` because it's not necessary here and can sometimes complicate the execution flow. A button click naturally causes Streamlit to rerun the script from the top anyway. The current approach is cleaner and more reliable for this specific goal.
-
----
-
-### Full Modified Code
-
-Here is your complete script with only the reset button section at the very bottom modified. You can copy and paste this entire code to replace your existing file.
-
-```python
 import streamlit as st
 from streamlit.components.v1 import html # It's good practice to import it
 
@@ -432,4 +388,3 @@ if st.button("Reset Ratings", use_container_width=True):
 
     # Clear all the stored values in the session state.
     st.session_state.clear()
-```
