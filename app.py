@@ -322,9 +322,10 @@ def check_if_name_exists(all_ratings_df, imdb_id, user_name):
     if "imdbID" not in all_ratings_df.columns or "userName" not in all_ratings_df.columns: return False
     
     # === THE FIX IS HERE ===
-    # Force both the DataFrame column and the movie's ID to be strings before comparing.
-    all_ratings_df['imdbID'] = all_ratings_df['imdbID'].astype(str)
-    movie_ratings = all_ratings_df[all_ratings_df['imdbID'] == str(imdb_id)]
+    # Force the DataFrame column to be a string AND strip any hidden whitespace.
+    all_ratings_df['imdbID'] = all_ratings_df['imdbID'].astype(str).str.strip()
+    # Filter using a cleaned version of the movie ID
+    movie_ratings = all_ratings_df[all_ratings_df['imdbID'] == str(imdb_id).strip()]
     # =======================
 
     if movie_ratings.empty: return False
@@ -381,14 +382,32 @@ def display_leaderboard(all_ratings_df, movie_id):
         return
     
     # === THE FIX IS HERE ===
-    # Force both the DataFrame column and the movie's ID to be strings before comparing.
-    all_ratings_df['imdbID'] = all_ratings_df['imdbID'].astype(str)
-    movie_ratings = all_ratings_df[all_ratings_df['imdbID'] == str(movie_id)].copy()
+    # Force the DataFrame column to be a string AND strip any hidden whitespace.
+    all_ratings_df['imdbID'] = all_ratings_df['imdbID'].astype(str).str.strip()
+    # Filter using a cleaned version of the movie ID
+    movie_ratings = all_ratings_df[all_ratings_df['imdbID'] == str(movie_id).strip()].copy()
     # =======================
     
     if movie_ratings.empty:
         st.info("Be the first to rate this movie!")
         return
+    
+    # Calculate stats and display
+    movie_ratings["rating"] = pd.to_numeric(movie_ratings["rating"])
+    count = len(movie_ratings)
+    mean_score = movie_ratings["rating"].mean()
+    top_10 = movie_ratings.nlargest(10, "rating")[["userName", "rating"]].to_records(index=False).tolist()
+    bottom_10 = movie_ratings.nsmallest(10, "rating")[["userName", "rating"]].to_records(index=False).tolist()
+    
+    st.metric(label=f"Average Score (from {count} ratings)", value=f"{mean_score:.1f} / 10.0")
+    
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("Top Ratings")
+        for name, score in top_10: st.markdown(f"- **{name}:** {score:.1f}")
+    with c2:
+        st.subheader("Lowest Ratings")
+        for name, score in bottom_10: st.markdown(f"- **{name}:** {score:.1f}")
     
     # Calculate stats and display
     movie_ratings["rating"] = pd.to_numeric(movie_ratings["rating"])
