@@ -316,11 +316,19 @@ def get_all_ratings(_worksheet):
     return pd.DataFrame(_worksheet.get_all_records())
 
 def check_if_name_exists(all_ratings_df, imdb_id, user_name):
+    """Checks if a user name has already rated a specific movie (case-insensitive)."""
     if all_ratings_df.empty or user_name.strip() == "": return False
-    # Defensive check to prevent KeyError if sheet is malformed
+    # Defensive check to prevent the KeyError if sheet is malformed
     if "imdbID" not in all_ratings_df.columns or "userName" not in all_ratings_df.columns: return False
-    movie_ratings = all_ratings_df[all_ratings_df["imdbID"] == imdb_id]
+    
+    # === THE FIX IS HERE ===
+    # Force both the DataFrame column and the movie's ID to be strings before comparing.
+    all_ratings_df['imdbID'] = all_ratings_df['imdbID'].astype(str)
+    movie_ratings = all_ratings_df[all_ratings_df['imdbID'] == str(imdb_id)]
+    # =======================
+
     if movie_ratings.empty: return False
+    # Perform a case-insensitive check on the filtered results
     return movie_ratings['userName'].str.lower().eq(user_name.lower()).any()
 
 # --- Core App Functions ---
@@ -365,16 +373,24 @@ class MovieRater:
 # 3. HELPER FUNCTION FOR DISPLAYING LEADERBOARD
 # ==============================================================================
 def display_leaderboard(all_ratings_df, movie_id):
+    """Calculates and displays the leaderboard stats for a specific movie."""
     st.header("⭐ Community Leaderboard")
+    # Defensive check to prevent KeyError
     if all_ratings_df.empty or "imdbID" not in all_ratings_df.columns:
         st.info("Be the first to rate this movie!")
         return
     
-    movie_ratings = all_ratings_df[all_ratings_df["imdbID"] == movie_id].copy()
+    # === THE FIX IS HERE ===
+    # Force both the DataFrame column and the movie's ID to be strings before comparing.
+    all_ratings_df['imdbID'] = all_ratings_df['imdbID'].astype(str)
+    movie_ratings = all_ratings_df[all_ratings_df['imdbID'] == str(movie_id)].copy()
+    # =======================
+    
     if movie_ratings.empty:
         st.info("Be the first to rate this movie!")
         return
     
+    # Calculate stats and display
     movie_ratings["rating"] = pd.to_numeric(movie_ratings["rating"])
     count = len(movie_ratings)
     mean_score = movie_ratings["rating"].mean()
@@ -386,12 +402,10 @@ def display_leaderboard(all_ratings_df, movie_id):
     c1, c2 = st.columns(2)
     with c1:
         st.subheader("Top Ratings")
-        for name, score in top_10:
-            st.markdown(f"- **{name}:** {score:.1f}")
+        for name, score in top_10: st.markdown(f"- **{name}:** {score:.1f}")
     with c2:
         st.subheader("Lowest Ratings")
-        for name, score in bottom_10:
-            st.markdown(f"- **{name}:** {score:.1f}")
+        for name, score in bottom_10: st.markdown(f"- **{name}:** {score:.1f}")
 
 # ==============================================================================
 # 4. STREAMLIT APP LAYOUT
@@ -438,6 +452,11 @@ else:
     try:
         worksheet = connect_to_gsheet()
         all_ratings_df = get_all_ratings(worksheet)
+
+      # === TEMPORARY DEBUGGING LINE ===
+        st.dataframe(all_ratings_df.head()) # This will display the top 5 rows of your database
+        # ================================
+    
     except Exception as e:
         st.error(f"Could not connect to the database. Leaderboard features are disabled. Error: {e}")
 
