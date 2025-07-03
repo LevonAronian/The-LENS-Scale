@@ -271,6 +271,7 @@ CATEGORY_DEFINITIONS = [
     }
 ]
 
+
 # ==============================================================================
 # 1. API, DATABASE, & CORE FUNCTIONS
 # ==============================================================================
@@ -311,7 +312,8 @@ def save_rating_to_gsheet(worksheet, imdb_id, movie_title, user_name, rating):
     new_row = [imdb_id, movie_title, user_name, float(rating), timestamp]
     worksheet.append_row(new_row, value_input_option='USER_ENTERED')
 
-@st.cache_data(ttl=600)
+# --- FIX: REMOVED @st.cache_data DECORATOR ---
+# This ensures the name check always uses live data.
 def get_all_ratings(_worksheet):
     return pd.DataFrame(_worksheet.get_all_records())
 
@@ -321,7 +323,6 @@ def check_if_name_exists(worksheet, imdb_id, user_name):
     all_ratings_df = get_all_ratings(worksheet)
     if all_ratings_df.empty or "imdbID" not in all_ratings_df.columns or "userName" not in all_ratings_df.columns: return False
     
-    # Force column to string and strip whitespace for robust comparison
     all_ratings_df['imdbID'] = all_ratings_df['imdbID'].astype(str).str.strip()
     movie_ratings = all_ratings_df[all_ratings_df['imdbID'] == str(imdb_id).strip()]
 
@@ -480,7 +481,7 @@ else:
     
     # Calculate Button & Submission Logic
     is_name_missing = not user_name
-    button_disabled = is_name_missing or is_name_missing
+    button_disabled = is_name_missing or name_is_taken
     
     if st.button("Calculate Final Score & Submit", type="primary", use_container_width=True, disabled=button_disabled):
         rated_cats = []
@@ -496,7 +497,6 @@ else:
             try:
                 with st.spinner("Saving your rating..."):
                     save_rating_to_gsheet(worksheet, movie["imdbID"], movie["Title"], user_name, final_score)
-                st.cache_data.clear()
                 st.success("Your rating has been saved!")
             except Exception as e:
                 st.error(f"Could not save your rating. Error: {e}")
@@ -518,6 +518,7 @@ else:
         
         st.divider()
         if worksheet:
+            # We don't need to clear the cache anymore because get_all_ratings is no longer cached
             display_leaderboard(worksheet, movie["imdbID"])
         
         st.button("Rate a Different Movie", on_click=reset_app, use_container_width=True)
