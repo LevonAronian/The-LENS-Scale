@@ -9,7 +9,7 @@ from datetime import datetime
 # 0. DATA DEFINITIONS (PASTE YOUR FULL LIST HERE)
 # ==============================================================================
 
-ATEGORY_DEFINITIONS = [
+CATEGORY_DEFINITIONS = [
     {
         "name": "Story/Plot",
         "max_score": 10,
