@@ -370,37 +370,37 @@ class MovieRater:
 # ==============================================================================
 # 3. HELPER FUNCTION FOR DISPLAYING LEADERBOARD
 # ==============================================================================
-# def display_leaderboard(worksheet, movie_id):
-#     """Calculates and displays the leaderboard stats for a specific movie."""
-#     all_ratings_df = get_all_ratings(worksheet)
+def display_leaderboard(worksheet, movie_id):
+    """Calculates and displays the leaderboard stats for a specific movie."""
+    all_ratings_df = get_all_ratings(worksheet)
     
-#     st.header("⭐ Community Leaderboard")
-#     if all_ratings_df.empty or "imdbID" not in all_ratings_df.columns:
-#         st.info("No ratings have been submitted for this movie yet.")
-#         return
+    st.header("⭐ Community Leaderboard")
+    if all_ratings_df.empty or "imdbID" not in all_ratings_df.columns:
+        st.info("No ratings have been submitted for this movie yet.")
+        return
     
-#     all_ratings_df['imdbID'] = all_ratings_df['imdbID'].astype(str).str.strip()
-#     movie_ratings = all_ratings_df[all_ratings_df['imdbID'] == str(movie_id).strip()].copy()
+    all_ratings_df['imdbID'] = all_ratings_df['imdbID'].astype(str).str.strip()
+    movie_ratings = all_ratings_df[all_ratings_df['imdbID'] == str(movie_id).strip()].copy()
     
-#     if movie_ratings.empty:
-#         st.info("No ratings have been submitted for this movie yet.")
-#         return
+    if movie_ratings.empty:
+        st.info("No ratings have been submitted for this movie yet.")
+        return
     
-#     movie_ratings["rating"] = pd.to_numeric(movie_ratings["rating"])
-#     count = len(movie_ratings)
-#     mean_score = movie_ratings["rating"].mean()
-#     top_10 = movie_ratings.nlargest(10, "rating")[["userName", "rating"]].to_records(index=False).tolist()
-#     bottom_10 = movie_ratings.nsmallest(10, "rating")[["userName", "rating"]].to_records(index=False).tolist()
+    movie_ratings["rating"] = pd.to_numeric(movie_ratings["rating"])
+    count = len(movie_ratings)
+    mean_score = movie_ratings["rating"].mean()
+    top_10 = movie_ratings.nlargest(10, "rating")[["userName", "rating"]].to_records(index=False).tolist()
+    bottom_10 = movie_ratings.nsmallest(10, "rating")[["userName", "rating"]].to_records(index=False).tolist()
     
-#     st.metric(label=f"Average Score (from {count} ratings)", value=f"{mean_score:.1f} / 10.0")
+    st.metric(label=f"Average Score (from {count} ratings)", value=f"{mean_score:.1f} / 10.0")
     
-#     c1, c2 = st.columns(2)
-#     with c1:
-#         st.subheader("Top Ratings")
-#         for name, score in top_10: st.markdown(f"- **{name}:** {score:.1f}")
-#     with c2:
-#         st.subheader("Lowest Ratings")
-#         for name, score in bottom_10: st.markdown(f"- **{name}:** {score:.1f}")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("Top Ratings")
+        for name, score in top_10: st.markdown(f"- **{name}:** {score:.1f}")
+    with c2:
+        st.subheader("Lowest Ratings")
+        for name, score in bottom_10: st.markdown(f"- **{name}:** {score:.1f}")
 
 # ==============================================================================
 # 4. STREAMLIT APP LAYOUT
