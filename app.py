@@ -380,7 +380,6 @@ st.set_page_config(page_title="LENS Movie Rater", page_icon="🎥", layout="cent
 # Securely load the API key from Streamlit's secrets management
 OMDB_API_KEY = st.secrets.get("OMDB_API_KEY", "")
 
-
 # --- VIEW 1: MOVIE SEARCH SCREEN ---
 if "movie_selected" not in st.session_state or not st.session_state.movie_selected:
     st.title("Search for a Movie to Rate 🔎")
@@ -393,13 +392,11 @@ if "movie_selected" not in st.session_state or not st.session_state.movie_select
     search_query = st.text_input("Movie Title", key="search_query", help="Start typing to see results...")
 
     # --- Dynamic Search Logic ---
-    # Only trigger a search if the query is long enough AND has changed.
     if len(search_query) >= 3 and search_query != st.session_state.get('last_searched_query'):
         with st.spinner("Searching..."):
             st.session_state.search_results = search_omdb(OMDB_API_KEY, search_query)
             st.session_state.last_searched_query = search_query
     
-    # If the user clears the search bar, also clear the results for a clean UI.
     if not search_query:
         st.session_state.search_results = []
 
@@ -420,10 +417,12 @@ if "movie_selected" not in st.session_state or not st.session_state.movie_select
                             # Store details and switch view
                             st.session_state.selected_movie_details = details
                             st.session_state.movie_selected = True
-                            st.experimental_rerun()
+                            # === THE FIX IS HERE ===
+                            st.rerun() 
+                            # =======================
                          else:
                             st.error("Could not fetch details for this movie.")
-
+                             
 
 # --- VIEW 2: MOVIE RATING SCREEN ---
 else:
