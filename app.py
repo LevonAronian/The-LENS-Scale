@@ -317,19 +317,23 @@ def get_all_ratings(_worksheet):
 
 def check_if_name_exists(all_ratings_df, imdb_id, user_name):
     """Checks if a user name has already rated a specific movie (case-insensitive)."""
+    # --- NEW DEBUGGING LINES START ---
+    st.write("--- Debugging `check_if_name_exists` ---")
+    st.write(f"Received movie_id to check against: `{str(imdb_id)}`")
+    if "imdbID" in all_ratings_df.columns:
+        unique_ids_in_sheet = all_ratings_df['imdbID'].astype(str).str.strip().unique()
+        st.write(f"Unique IDs found in database: `{list(unique_ids_in_sheet)}`")
+    else:
+        st.write("`imdbID` column not found in DataFrame.")
+    # --- NEW DEBUGGING LINES END ---
+
     if all_ratings_df.empty or user_name.strip() == "": return False
-    # Defensive check to prevent the KeyError if sheet is malformed
     if "imdbID" not in all_ratings_df.columns or "userName" not in all_ratings_df.columns: return False
     
-    # === THE FIX IS HERE ===
-    # Force the DataFrame column to be a string AND strip any hidden whitespace.
     all_ratings_df['imdbID'] = all_ratings_df['imdbID'].astype(str).str.strip()
-    # Filter using a cleaned version of the movie ID
     movie_ratings = all_ratings_df[all_ratings_df['imdbID'] == str(imdb_id).strip()]
-    # =======================
 
     if movie_ratings.empty: return False
-    # Perform a case-insensitive check on the filtered results
     return movie_ratings['userName'].str.lower().eq(user_name.lower()).any()
 
 # --- Core App Functions ---
@@ -375,24 +379,28 @@ class MovieRater:
 # ==============================================================================
 def display_leaderboard(all_ratings_df, movie_id):
     """Calculates and displays the leaderboard stats for a specific movie."""
+    # --- NEW DEBUGGING LINES START ---
+    st.write("--- Debugging `display_leaderboard` ---")
+    st.write(f"Received movie_id to display: `{str(movie_id)}`")
+    if "imdbID" in all_ratings_df.columns:
+        unique_ids_in_sheet = all_ratings_df['imdbID'].astype(str).str.strip().unique()
+        st.write(f"Unique IDs found in database: `{list(unique_ids_in_sheet)}`")
+    else:
+        st.write("`imdbID` column not found in DataFrame.")
+    # --- NEW DEBUGGING LINES END ---
+
     st.header("⭐ Community Leaderboard")
-    # Defensive check to prevent KeyError
     if all_ratings_df.empty or "imdbID" not in all_ratings_df.columns:
         st.info("Be the first to rate this movie!")
         return
     
-    # === THE FIX IS HERE ===
-    # Force the DataFrame column to be a string AND strip any hidden whitespace.
     all_ratings_df['imdbID'] = all_ratings_df['imdbID'].astype(str).str.strip()
-    # Filter using a cleaned version of the movie ID
     movie_ratings = all_ratings_df[all_ratings_df['imdbID'] == str(movie_id).strip()].copy()
-    # =======================
     
     if movie_ratings.empty:
         st.info("Be the first to rate this movie!")
         return
     
-    # Calculate stats and display
     movie_ratings["rating"] = pd.to_numeric(movie_ratings["rating"])
     count = len(movie_ratings)
     mean_score = movie_ratings["rating"].mean()
@@ -403,11 +411,9 @@ def display_leaderboard(all_ratings_df, movie_id):
     
     c1, c2 = st.columns(2)
     with c1:
-        st.subheader("Top Ratings")
-        for name, score in top_10: st.markdown(f"- **{name}:** {score:.1f}")
+        st.subheader("Top Ratings"); [st.markdown(f"- **{name}:** {score:.1f}") for name, score in top_10]
     with c2:
-        st.subheader("Lowest Ratings")
-        for name, score in bottom_10: st.markdown(f"- **{name}:** {score:.1f}")
+        st.subheader("Lowest Ratings"); [st.markdown(f"- **{name}:** {score:.1f}") for name, score in bottom_10]
     
     # Calculate stats and display
     movie_ratings["rating"] = pd.to_numeric(movie_ratings["rating"])
