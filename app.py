@@ -271,42 +271,60 @@ CATEGORY_DEFINITIONS = [
     }
 ]
 
+
 # ==============================================================================
-# 1. API, DATABASE, & CORE FUNCTIONS (REVISED)
+# 1. API, DATABASE, & CORE FUNCTIONS
 # ==============================================================================
-# --- OMDb API Functions (Unchanged) ---
+
+# --- OMDb API Functions ---
 def search_omdb(api_key, query):
     if not api_key or not query: return []
-    url = f"http://www.omdbapi.com/?s={query.strip()}&type=movie&apikey={api_key}";
-    try: response = requests.get(url, timeout=5); response.raise_for_status(); data = response.json(); return data.get("Search", []) if data.get("Response") == "True" else []
+    url = f"http://www.omdbapi.com/?s={query.strip()}&type=movie&apikey={api_key}"
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        if data.get("Response") == "True": return data.get("Search", [])
     except requests.exceptions.RequestException: return []
+    return []
+
 def get_movie_details(api_key, imdb_id):
     if not api_key or not imdb_id: return None
-    url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={api_key}";
-    try: response = requests.get(url, timeout=5); response.raise_for_status(); data = response.json(); return data if data.get("Response") == "True" else None
+    url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={api_key}"
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        if data.get("Response") == "True": return data
     except requests.exceptions.RequestException: return None
-# --- Google Sheets Functions (REVISED) ---
+    return None
+
+# --- Google Sheets Functions ---
 @st.cache_resource
 def connect_to_gsheet():
-    creds = st.secrets["gcp_service_account"]; gc = gspread.service_account_from_dict(creds)
-    spreadsheet = gc.open("MovieRatingsDB"); return spreadsheet.worksheet("Sheet1")
+    creds = st.secrets["gcp_service_account"]
+    gc = gspread.service_account_from_dict(creds)
+    spreadsheet = gc.open("MovieRatingsDB")
+    return spreadsheet.worksheet("Sheet1")
+
 def save_rating_to_gsheet(worksheet, imdb_id, movie_title, user_name, rating):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     new_row = [imdb_id, movie_title, user_name, float(rating), timestamp]
     worksheet.append_row(new_row, value_input_option='USER_ENTERED')
+
 @st.cache_data(ttl=600)
 def get_all_ratings(_worksheet):
     return pd.DataFrame(_worksheet.get_all_records())
-# --- NEW: Name validation function ---
+
 def check_if_name_exists(all_ratings_df, imdb_id, user_name):
-    """Checks if a user name has already rated a specific movie (case-insensitive)."""
     if all_ratings_df.empty or user_name.strip() == "": return False
+    # Defensive check to prevent the KeyError
+    if "imdbID" not in all_ratings_df.columns or "userName" not in all_ratings_df.columns: return False
     movie_ratings = all_ratings_df[all_ratings_df["imdbID"] == imdb_id]
     if movie_ratings.empty: return False
-    # Perform a case-insensitive check
     return movie_ratings['userName'].str.lower().eq(user_name.lower()).any()
 
-# --- Core App Functions (Unchanged) ---
+# --- Core App Functions ---
 def reset_app():
     keys_to_delete = ["movie_selected", "search_query", "last_searched_query", "search_results", "selected_movie_details", "user_name"]
     for key in keys_to_delete:
@@ -314,24 +332,35 @@ def reset_app():
     for category in CATEGORY_DEFINITIONS:
         st.session_state[f"rating_{category['name']}"] = category['max_score'] // 2 + 1
         if category["name"] == "Action": st.session_state[f"no_action_{category['name']}"] = False
-    st.cache_data.clear() # Clear cache on reset as well
+    st.cache_data.clear()
     st.session_state.scroll_to_top = True
+
 if "scroll_to_top" in st.session_state:
     st.components.v1.html('<script>window.parent.scrollTo(0, 0);</script>', height=0)
     del st.session_state.scroll_to_top
 
+
 # ==============================================================================
-# 2. CORE LOGIC CLASSES (Unchanged)
+# 2. CORE LOGIC CLASSES
 # ==============================================================================
 class Category:
-    def __init__(self, name, max_score, weight, user_rating, multipliers): self.name, self.max_score, self.base_weight, self.user_rating, self.weight_multipliers = name, max_score, weight, user_rating, multipliers; self.dynamic_weight = weight
+    def __init__(self, name, max_score, weight, user_rating, multipliers):
+        self.name, self.max_score, self.base_weight, self.user_rating, self.weight_multipliers = name, max_score, weight, user_rating, multipliers
+        self.dynamic_weight = weight
 class MovieRater:
-    def __init__(self, categories): self.categories, self.final_score = categories, 0.0
+    def __init__(self, categories):
+        self.categories, self.final_score = categories, 0.0
     def calculate_score(self):
         total_weighted_score, total_weight_used = 0.0, 0.0;
         for cat in self.categories:
-            if cat.user_rating is not None and cat.max_score > 1: norm_score = (cat.user_rating - 1) / (cat.max_score - 1); multiplier = cat.weight_multipliers.get(cat.user_rating, 1.0); cat.dynamic_weight = cat.base_weight * multiplier; total_weighted_score += norm_score * cat.dynamic_weight; total_weight_used += cat.dynamic_weight
-        self.final_score = (total_weighted_score / total_weight_used) * 10 if total_weight_used > 0 else 0.0; return self.final_score, self.categories
+            if cat.user_rating is not None and cat.max_score > 1:
+                norm_score = (cat.user_rating - 1) / (cat.max_score - 1)
+                multiplier = cat.weight_multipliers.get(cat.user_rating, 1.0)
+                cat.dynamic_weight = cat.base_weight * multiplier
+                total_weighted_score += norm_score * cat.dynamic_weight
+                total_weight_used += cat.dynamic_weight
+        self.final_score = (total_weighted_score / total_weight_used) * 10 if total_weight_used > 0 else 0.0
+        return self.final_score, self.categories
 
 # ==============================================================================
 # 3. HELPER FUNCTION FOR DISPLAYING LEADERBOARD
@@ -348,16 +377,22 @@ def display_leaderboard(all_ratings_df, movie_id):
         return
     
     movie_ratings["rating"] = pd.to_numeric(movie_ratings["rating"])
-    count = len(movie_ratings); mean_score = movie_ratings["rating"].mean()
+    count = len(movie_ratings)
+    mean_score = movie_ratings["rating"].mean()
     top_10 = movie_ratings.nlargest(10, "rating")[["userName", "rating"]].to_records(index=False).tolist()
     bottom_10 = movie_ratings.nsmallest(10, "rating")[["userName", "rating"]].to_records(index=False).tolist()
     
+    # --- THIS IS WHERE THE MEAN IS DISPLAYED ---
     st.metric(label=f"Average Score (from {count} ratings)", value=f"{mean_score:.1f} / 10.0")
+    # -------------------------------------------
+    
     c1, c2 = st.columns(2)
     with c1:
-        st.subheader("Top Ratings"); [st.markdown(f"- **{name}:** {score:.1f}") for name, score in top_10]
+        st.subheader("Top Ratings")
+        [st.markdown(f"- **{name}:** {score:.1f}") for name, score in top_10]
     with c2:
-        st.subheader("Lowest Ratings"); [st.markdown(f"- **{name}:** {score:.1f}") for name, score in bottom_10]
+        st.subheader("Lowest Ratings")
+        [st.markdown(f"- **{name}:** {score:.1f}") for name, score in bottom_10]
 
 # ==============================================================================
 # 4. STREAMLIT APP LAYOUT
@@ -367,13 +402,20 @@ OMDB_API_KEY = st.secrets.get("OMDB_API_KEY", "")
 
 # --- VIEW 1: SEARCH SCREEN ---
 if not st.session_state.get("movie_selected"):
-    st.title("The LENS Movie Rating System 🎥"); st.markdown("> *The Logical & Editorial Narrative Scrutiny (LENS) Scale*"); st.markdown("A comprehensive framework..."); st.markdown("🖋️ In the modern discourse..."); st.divider()
+    st.title("The LENS Movie Rating System 🎥")
+    st.markdown("> *The Logical & Editorial Narrative Scrutiny (LENS) Scale*")
+    st.markdown("A comprehensive framework for cinematic evaluation that brings focus to film criticism.")
+    st.markdown("🖋️ In the modern discourse of film, meaningful critique is too often lost in a sea of reductive scores and unchecked personal bias. The LENS scale was conceived as a corrective, comprehensive and all-encompassing standard for cinematic evaluation.")
+    st.divider()
     st.header("Search for a Movie to Rate 🔎")
+    
     search_query = st.text_input("Movie Title", key="search_query")
-    # (Search logic remains the same)
     if len(search_query) >= 3 and search_query != st.session_state.get('last_searched_query'):
-        with st.spinner("Searching..."): st.session_state.search_results = search_omdb(OMDB_API_KEY, search_query); st.session_state.last_searched_query = search_query
+        with st.spinner("Searching..."):
+            st.session_state.search_results = search_omdb(OMDB_API_KEY, search_query)
+            st.session_state.last_searched_query = search_query
     if not search_query: st.session_state.search_results = []
+    
     if st.session_state.get('search_results'):
         st.subheader("Search Results")
         for movie_result in st.session_state.search_results:
@@ -382,84 +424,96 @@ if not st.session_state.get("movie_selected"):
             with col2:
                 st.write(f"**{movie_result['Title']}** ({movie_result['Year']})")
                 if st.button("Select to Rate", key=movie_result['imdbID']):
-                    with st.spinner("Loading..."): details = get_movie_details(OMDB_API_KEY, movie_result['imdbID'])
-                    if details: st.session_state.selected_movie_details = details; st.session_state.movie_selected = True; st.rerun()
+                    with st.spinner("Loading..."):
+                        details = get_movie_details(OMDB_API_KEY, movie_result['imdbID'])
+                        if details:
+                            st.session_state.selected_movie_details = details
+                            st.session_state.movie_selected = True
+                            st.rerun()
 
 # --- VIEW 2: MOVIE RATING SCREEN ---
 else:
     movie = st.session_state.selected_movie_details
-    all_ratings_df = pd.DataFrame() # Initialize empty dataframe
+    worksheet = None
+    all_ratings_df = pd.DataFrame()
     try:
         worksheet = connect_to_gsheet()
         all_ratings_df = get_all_ratings(worksheet)
-    except Exception as e: st.error(f"Could not connect to the database. Leaderboard features are disabled. Error: {e}"); worksheet = None
+    except Exception as e:
+        st.error(f"Could not connect to the database. Leaderboard features are disabled. Error: {e}")
 
     # Movie Header
     col1, col2 = st.columns([1, 3])
     with col1: st.image(movie.get("Poster", "https://i.imgur.com/u1T0t5f.png"))
-    with col2: st.title(movie.get("Title", "N/A")); st.subheader(f"({movie.get('Year', 'N/A')})"); st.write(f"**Director:** {movie.get('Director', 'N/A')}"); st.caption(f"_{movie.get('Plot', '')}_")
+    with col2:
+        st.title(movie.get("Title", "N/A"))
+        st.subheader(f"({movie.get('Year', 'N/A')})")
+        st.write(f"**Director:** {movie.get('Director', 'N/A')}")
+        st.caption(f"_{movie.get('Plot', '')}_")
     
     st.divider()
     st.header("Rate this Movie using The LENS Scale")
     
-    # Name Input and Validation
     user_name = st.text_input("Your Name (for the leaderboard)", key="user_name").strip()
     name_is_taken = False
     if user_name and worksheet:
         name_is_taken = check_if_name_exists(all_ratings_df, movie["imdbID"], user_name)
     
-    # Rating Sliders
     for cat_data in CATEGORY_DEFINITIONS:
-        # (Descriptor and slider logic is fine)
-        name, max_score, key = cat_data["name"], cat_data["max_score"], f"rating_{cat_data['name']}";
+        name, max_score, key = cat_data["name"], cat_data["max_score"], f"rating_{cat_data['name']}"
         if key not in st.session_state: st.session_state[key] = max_score // 2 + 1
         if name == "Action" and f"no_action_{name}" not in st.session_state: st.session_state[f"no_action_{name}"] = False
         st.subheader(name)
         with st.expander("Show Rating Descriptors"):
             for desc in cat_data["descriptors"]: st.write(f" - {desc}")
         if name == "Action":
-            if not st.checkbox("This movie has no action.", key=f"no_action_{name}"): st.slider(f"Rate {name}", 1, max_score, key=key)
+            if not st.checkbox("This movie has no action.", key=f"no_action_{name}"):
+                st.slider(f"Rate {name}", 1, max_score, key=key)
         else: st.slider(f"Rate {name}", 1, max_score, key=key)
     st.divider()
     
-    # Calculate Button & Submission Logic
     is_name_missing = not user_name
     button_disabled = is_name_missing or name_is_taken
     
     if st.button("Calculate Final Score & Submit", type="primary", use_container_width=True, disabled=button_disabled):
-        # Calculate score
         rated_cats = []
         for cat_def in CATEGORY_DEFINITIONS:
             cat_name = cat_def["name"]
             rating = None if cat_name == "Action" and st.session_state.get(f"no_action_{cat_name}") else st.session_state.get(f"rating_{cat_name}")
             rated_cats.append(Category(name=cat_name, max_score=cat_def["max_score"], weight=cat_def["weight"], user_rating=rating, multipliers=cat_def.get("weight_multipliers", {})))
-        rater = MovieRater(rated_cats); final_score, summary_cats = rater.calculate_score()
+        
+        rater = MovieRater(rated_cats)
+        final_score, summary_cats = rater.calculate_score()
 
-        # Save to database
         if worksheet:
             try:
                 with st.spinner("Saving your rating..."):
                     save_rating_to_gsheet(worksheet, movie["imdbID"], movie["Title"], user_name, final_score)
-                st.cache_data.clear(); st.success("Your rating has been saved!")
-                # Get the fresh, updated data after saving
+                st.cache_data.clear()
+                st.success("Your rating has been saved!")
                 all_ratings_df = get_all_ratings(worksheet)
-            except Exception as e: st.error(f"Could not save your rating. Error: {e}")
+            except Exception as e:
+                st.error(f"Could not save your rating. Error: {e}")
 
-        # Display results and final leaderboard
-        st.header("🏆 Your Final Score"); st.metric(label="LENS Score", value=f"{final_score:.1f} / 10.0")
+        st.header("🏆 Your Final Score")
+        st.metric(label="LENS Score", value=f"{final_score:.1f} / 10.0")
         st.header("📊 Your Rating Summary")
-        c1, c2 = st.columns(2); mid = (len(summary_cats) + 1) // 2
+        c1, c2 = st.columns(2)
+        mid = (len(summary_cats) + 1) // 2
         with c1:
-            for cat in summary_cats[:mid]: r_disp, w_disp = (str(cat.user_rating), f"({cat.dynamic_weight:.3f})") if cat.user_rating is not None else ("N/A", ""); st.markdown(f"**{cat.name}:** {r_disp} {w_disp}")
+            for cat in summary_cats[:mid]:
+                r_disp, w_disp = (str(cat.user_rating), f"({cat.dynamic_weight:.3f})") if cat.user_rating is not None else ("N/A", "")
+                st.markdown(f"**{cat.name}:** {r_disp} {w_disp}")
         with c2:
-            for cat in summary_cats[mid:]: r_disp, w_disp = (str(cat.user_rating), f"({cat.dynamic_weight:.3f})") if cat.user_rating is not None else ("N/A", ""); st.markdown(f"**{cat.name}:** {r_disp} {w_disp}")
+            for cat in summary_cats[mid:]:
+                r_disp, w_disp = (str(cat.user_rating), f"({cat.dynamic_weight:.3f})") if cat.user_rating is not None else ("N/A", "")
+                st.markdown(f"**{cat.name}:** {r_disp} {w_disp}")
         
         st.divider()
         if worksheet: display_leaderboard(all_ratings_df, movie["imdbID"])
         
         st.button("Rate a Different Movie", on_click=reset_app, use_container_width=True)
 
-    # Display validation errors after the button
     if is_name_missing:
         st.warning("Please enter your name to enable the submit button.")
     if name_is_taken:
