@@ -271,7 +271,6 @@ CATEGORY_DEFINITIONS = [
     }
 ]
 
-
 # ==============================================================================
 # 1. API, DATABASE, & CORE FUNCTIONS
 # ==============================================================================
@@ -318,7 +317,7 @@ def get_all_ratings(_worksheet):
 
 def check_if_name_exists(all_ratings_df, imdb_id, user_name):
     if all_ratings_df.empty or user_name.strip() == "": return False
-    # Defensive check to prevent the KeyError
+    # Defensive check to prevent KeyError if sheet is malformed
     if "imdbID" not in all_ratings_df.columns or "userName" not in all_ratings_df.columns: return False
     movie_ratings = all_ratings_df[all_ratings_df["imdbID"] == imdb_id]
     if movie_ratings.empty: return False
@@ -382,17 +381,17 @@ def display_leaderboard(all_ratings_df, movie_id):
     top_10 = movie_ratings.nlargest(10, "rating")[["userName", "rating"]].to_records(index=False).tolist()
     bottom_10 = movie_ratings.nsmallest(10, "rating")[["userName", "rating"]].to_records(index=False).tolist()
     
-    # --- THIS IS WHERE THE MEAN IS DISPLAYED ---
     st.metric(label=f"Average Score (from {count} ratings)", value=f"{mean_score:.1f} / 10.0")
-    # -------------------------------------------
     
     c1, c2 = st.columns(2)
     with c1:
         st.subheader("Top Ratings")
-        [st.markdown(f"- **{name}:** {score:.1f}") for name, score in top_10]
+        for name, score in top_10:
+            st.markdown(f"- **{name}:** {score:.1f}")
     with c2:
         st.subheader("Lowest Ratings")
-        [st.markdown(f"- **{name}:** {score:.1f}") for name, score in bottom_10]
+        for name, score in bottom_10:
+            st.markdown(f"- **{name}:** {score:.1f}")
 
 # ==============================================================================
 # 4. STREAMLIT APP LAYOUT
@@ -456,9 +455,10 @@ else:
     
     user_name = st.text_input("Your Name (for the leaderboard)", key="user_name").strip()
     name_is_taken = False
-    if user_name and worksheet:
+    if user_name and worksheet is not None:
         name_is_taken = check_if_name_exists(all_ratings_df, movie["imdbID"], user_name)
     
+    # Rating Sliders
     for cat_data in CATEGORY_DEFINITIONS:
         name, max_score, key = cat_data["name"], cat_data["max_score"], f"rating_{cat_data['name']}"
         if key not in st.session_state: st.session_state[key] = max_score // 2 + 1
@@ -472,29 +472,35 @@ else:
         else: st.slider(f"Rate {name}", 1, max_score, key=key)
     st.divider()
     
+    # Calculate Button & Submission Logic
     is_name_missing = not user_name
     button_disabled = is_name_missing or name_is_taken
     
     if st.button("Calculate Final Score & Submit", type="primary", use_container_width=True, disabled=button_disabled):
+        # Calculate score
         rated_cats = []
         for cat_def in CATEGORY_DEFINITIONS:
             cat_name = cat_def["name"]
             rating = None if cat_name == "Action" and st.session_state.get(f"no_action_{cat_name}") else st.session_state.get(f"rating_{cat_name}")
             rated_cats.append(Category(name=cat_name, max_score=cat_def["max_score"], weight=cat_def["weight"], user_rating=rating, multipliers=cat_def.get("weight_multipliers", {})))
-        
         rater = MovieRater(rated_cats)
         final_score, summary_cats = rater.calculate_score()
 
+        # Save to database
         if worksheet:
             try:
                 with st.spinner("Saving your rating..."):
                     save_rating_to_gsheet(worksheet, movie["imdbID"], movie["Title"], user_name, final_score)
-                st.cache_data.clear()
                 st.success("Your rating has been saved!")
+                
+                # ===== THE FIX IS HERE (PART 1) =====
+                st.cache_data.clear()
                 all_ratings_df = get_all_ratings(worksheet)
+                # ======================================
             except Exception as e:
                 st.error(f"Could not save your rating. Error: {e}")
 
+        # Display results and final leaderboard
         st.header("🏆 Your Final Score")
         st.metric(label="LENS Score", value=f"{final_score:.1f} / 10.0")
         st.header("📊 Your Rating Summary")
@@ -510,11 +516,15 @@ else:
                 st.markdown(f"**{cat.name}:** {r_disp} {w_disp}")
         
         st.divider()
-        if worksheet: display_leaderboard(all_ratings_df, movie["imdbID"])
+        # ===== THE FIX IS HERE (PART 2) =====
+        if worksheet:
+            display_leaderboard(all_ratings_df, movie["imdbID"])
+        # ======================================
         
         st.button("Rate a Different Movie", on_click=reset_app, use_container_width=True)
 
+    # Display validation errors after the button
     if is_name_missing:
         st.warning("Please enter your name to enable the submit button.")
     if name_is_taken:
-        st.error(f"The name '{user_name}' has already rated this movie. Please choose a different name.")
+        st.error(f"The name '{user_name}' has already rated this movie. Please choose a different name or add a number to yours (e.g., '{user_name}2').")
