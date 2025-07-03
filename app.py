@@ -1,12 +1,15 @@
 import streamlit as st
 import requests
+import pandas as pd
+import gspread
+from gspread_dataframe import set_with_dataframe
+from datetime import datetime
 
 # ==============================================================================
 # 0. DATA DEFINITIONS (PASTE YOUR FULL LIST HERE)
 # ==============================================================================
 
-# <<< PASTE YOUR COMPLETE, UNABRIDGED CATEGORY_DEFINITIONS LIST HERE >>>
-CATEGORY_DEFINITIONS = [
+ATEGORY_DEFINITIONS = [
     {
         "name": "Story/Plot",
         "max_score": 10,
@@ -269,240 +272,232 @@ CATEGORY_DEFINITIONS = [
     }
 ]
 
+
 # ==============================================================================
-# 1. API & CORE FUNCTIONS
+# 1. API, DATABASE, & CORE FUNCTIONS
 # ==============================================================================
 
+# --- OMDb API Functions ---
 def search_omdb(api_key, query):
-    """Searches OMDb for movies matching the query."""
-    if not api_key or not query:
-        return []
+    if not api_key or not query: return []
     url = f"http://www.omdbapi.com/?s={query.strip()}&type=movie&apikey={api_key}"
     try:
-        response = requests.get(url)
-        # Raises an exception for bad responses (4xx or 5xx)
+        response = requests.get(url, timeout=5)
         response.raise_for_status()
         data = response.json()
-        if data.get("Response") == "True":
-            return data.get("Search", [])
-    except requests.exceptions.RequestException as e:
-        st.error(f"API request failed: {e}")
+        if data.get("Response") == "True": return data.get("Search", [])
+    except requests.exceptions.RequestException as e: st.error(f"API request failed: {e}")
     return []
 
 def get_movie_details(api_key, imdb_id):
-    """Gets detailed information for a single movie using its IMDb ID."""
-    if not api_key or not imdb_id:
-        return None
+    if not api_key or not imdb_id: return None
     url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={api_key}"
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=5)
         response.raise_for_status()
         data = response.json()
-        if data.get("Response") == "True":
-            return data
-    except requests.exceptions.RequestException as e:
-        st.error(f"API request failed: {e}")
+        if data.get("Response") == "True": return data
+    except requests.exceptions.RequestException as e: st.error(f"API request failed: {e}")
     return None
 
+# --- Google Sheets Functions ---
+@st.cache_resource
+def connect_to_gsheet():
+    creds = st.secrets["gcp_service_account"]
+    gc = gspread.service_account_from_dict(creds)
+    spreadsheet = gc.open("MovieRatingsDB")
+    return spreadsheet.worksheet("Sheet1")
+
+def save_rating_to_gsheet(worksheet, imdb_id, movie_title, rating):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    new_row = [imdb_id, movie_title, float(rating), timestamp]
+    worksheet.append_row(new_row, value_input_option='USER_ENTERED')
+
+@st.cache_data(ttl=600)
+def get_leaderboard_stats(_worksheet, imdb_id):
+    all_data = pd.DataFrame(_worksheet.get_all_records())
+    if all_data.empty: return {"count": 0, "mean": 0, "top": [], "bottom": []}
+    
+    movie_ratings = all_data[all_data["imdbID"] == imdb_id].copy()
+    if movie_ratings.empty: return {"count": 0, "mean": 0, "top": [], "bottom": []}
+    
+    movie_ratings["rating"] = pd.to_numeric(movie_ratings["rating"])
+    count = len(movie_ratings)
+    mean_score = movie_ratings["rating"].mean()
+    top_10 = movie_ratings.nlargest(10, "rating")["rating"].tolist()
+    bottom_10 = movie_ratings.nsmallest(10, "rating")["rating"].tolist()
+    
+    return {"count": count, "mean": mean_score, "top": top_10, "bottom": bottom_10}
+
+# --- Core App Functions ---
 def reset_app():
-    """Resets the entire app state to go back to the search screen."""
-    # List of all state keys to reset or delete
-    keys_to_reset = [
-        "movie_selected", "search_query", "last_searched_query",
-        "search_results", "selected_movie_details"
-    ]
-    for key in keys_to_reset:
-        if key in st.session_state:
-            del st.session_state[key]
+    keys_to_delete = ["movie_selected", "search_query", "last_searched_query", "search_results", "selected_movie_details"]
+    for key in keys_to_delete:
+        if key in st.session_state: del st.session_state[key]
     
-    # Also explicitly reset the rating widgets to their default values
     for category in CATEGORY_DEFINITIONS:
-        name = category["name"]
-        max_score = category["max_score"]
-        st.session_state[f"rating_{name}"] = max_score // 2 + 1
-        if name == "Action":
-            st.session_state[f"no_action_{name}"] = False
+        st.session_state[f"rating_{category['name']}"] = category['max_score'] // 2 + 1
+        if category["name"] == "Action": st.session_state[f"no_action_{category['name']}"] = False
     
-    # Set the scroll flag to trigger on the next rerun
     st.session_state.scroll_to_top = True
 
-
-# This block handles the scroll-to-top functionality.
 if "scroll_to_top" in st.session_state:
     st.components.v1.html('<script>window.parent.scrollTo(0, 0);</script>', height=0)
     del st.session_state.scroll_to_top
 
 
 # ==============================================================================
-# 2. CORE LOGIC CLASSES (No changes needed)
+# 2. CORE LOGIC CLASSES
 # ==============================================================================
-
 class Category:
-    """An object representing a single rating category with its data."""
     def __init__(self, name, max_score, weight, user_rating, multipliers):
-        self.name = name
-        self.max_score = max_score
-        self.base_weight = weight
-        self.user_rating = user_rating
-        self.weight_multipliers = multipliers
+        self.name, self.max_score, self.base_weight, self.user_rating, self.weight_multipliers = name, max_score, weight, user_rating, multipliers
         self.dynamic_weight = weight
-
 class MovieRater:
-    """The main controller that calculates the final score."""
     def __init__(self, categories):
-        self.categories = categories
-        self.final_score = 0.0
-
+        self.categories, self.final_score = categories, 0.0
     def calculate_score(self):
-        total_weighted_score = 0.0
-        total_weight_used = 0.0
-        for category in self.categories:
-            if category.user_rating is not None and category.max_score > 1:
-                normalized_score = (category.user_rating - 1) / (category.max_score - 1)
-                multiplier = category.weight_multipliers.get(category.user_rating, 1.0)
-                category.dynamic_weight = category.base_weight * multiplier
-                total_weighted_score += normalized_score * category.dynamic_weight
-                total_weight_used += category.dynamic_weight
-
-        if total_weight_used > 0:
-            self.final_score = (total_weighted_score / total_weight_used) * 10
-        else:
-            self.final_score = 0.0
+        total_weighted_score, total_weight_used = 0.0, 0.0
+        for cat in self.categories:
+            if cat.user_rating is not None and cat.max_score > 1:
+                norm_score = (cat.user_rating - 1) / (cat.max_score - 1)
+                multiplier = cat.weight_multipliers.get(cat.user_rating, 1.0)
+                cat.dynamic_weight = cat.base_weight * multiplier
+                total_weighted_score += norm_score * cat.dynamic_weight
+                total_weight_used += cat.dynamic_weight
+        self.final_score = (total_weighted_score / total_weight_used) * 10 if total_weight_used > 0 else 0.0
         return self.final_score, self.categories
 
 
 # ==============================================================================
-# 3. STREAMLIT APP LAYOUT (Main control flow)
+# 3. STREAMLIT APP LAYOUT
 # ==============================================================================
-
 st.set_page_config(page_title="LENS Movie Rater", page_icon="🎥", layout="centered")
 
-# Securely load the API key from Streamlit's secrets management
 OMDB_API_KEY = st.secrets.get("OMDB_API_KEY", "")
 
 # --- VIEW 1: MOVIE SEARCH SCREEN ---
-if "movie_selected" not in st.session_state or not st.session_state.movie_selected:
-    st.title("Search for a Movie to Rate 🔎")
+if not st.session_state.get("movie_selected"):
+    st.title("The LENS Movie Rating System 🎥")
     
+    # --- NEW: Project Description ---
+    st.markdown("> *The Logical & Editorial Narrative Scrutiny (LENS) Scale*")
+    st.markdown("A comprehensive framework for cinematic evaluation that brings focus to film criticism.")
+    st.markdown("🖋️ In the modern discourse of film, meaningful critique is too often lost in a sea of reductive scores and unchecked personal bias. The LENS scale was conceived as a corrective, comprehensive and all-encompassing standard for cinematic evaluation.")
+    st.markdown("https://github.com/LevonAronian/The-LENS-Scale/tree/main")
+    st.divider()
+
+    st.header("Search for a Movie to Rate 🔎")
     if not OMDB_API_KEY:
         st.error("OMDb API key not found. Please add it to your Streamlit secrets.")
-        st.stop() # Halt execution if no key is present
-
-    # Dynamic text input. The script reruns on every character typed.
+        st.stop()
+    
     search_query = st.text_input("Movie Title", key="search_query", help="Start typing to see results...")
 
-    # --- Dynamic Search Logic ---
     if len(search_query) >= 3 and search_query != st.session_state.get('last_searched_query'):
         with st.spinner("Searching..."):
             st.session_state.search_results = search_omdb(OMDB_API_KEY, search_query)
             st.session_state.last_searched_query = search_query
-    
-    if not search_query:
-        st.session_state.search_results = []
+    if not search_query: st.session_state.search_results = []
 
-    # --- Display Search Results ---
     if st.session_state.get('search_results'):
         st.subheader("Search Results")
         for movie in st.session_state.search_results:
             col1, col2 = st.columns([1, 4])
-            with col1:
-                poster_url = movie.get("Poster") if movie.get("Poster") != "N/A" else "https://i.imgur.com/u1T0t5f.png"
-                st.image(poster_url, width=100)
+            with col1: st.image(movie.get("Poster") if movie.get("Poster") != "N/A" else "https://i.imgur.com/u1T0t5f.png", width=100)
             with col2:
                 st.write(f"**{movie['Title']}** ({movie['Year']})")
                 if st.button("Select to Rate", key=movie['imdbID']):
                     with st.spinner("Loading movie details..."):
                          details = get_movie_details(OMDB_API_KEY, movie['imdbID'])
                          if details:
-                            # Store details and switch view
                             st.session_state.selected_movie_details = details
                             st.session_state.movie_selected = True
-                            # === THE FIX IS HERE ===
-                            st.rerun() 
-                            # =======================
-                         else:
-                            st.error("Could not fetch details for this movie.")
-                             
+                            st.rerun()
+                         else: st.error("Could not fetch details for this movie.")
 
 # --- VIEW 2: MOVIE RATING SCREEN ---
 else:
     movie = st.session_state.selected_movie_details
-    
-    # Display selected movie header
+    try:
+        worksheet = connect_to_gsheet()
+    except Exception as e:
+        st.error(f"Could not connect to the database. Leaderboard features are disabled. Error: {e}")
+        worksheet = None
+
     col1, col2 = st.columns([1, 3])
-    with col1:
-        poster_url = movie.get("Poster") if movie.get("Poster") != "N/A" else "https://i.imgur.com/u1T0t5f.png"
-        st.image(poster_url)
+    with col1: st.image(movie.get("Poster", "https://i.imgur.com/u1T0t5f.png"))
     with col2:
         st.title(movie.get("Title", "N/A"))
         st.subheader(f"({movie.get('Year', 'N/A')})")
         st.write(f"**Director:** {movie.get('Director', 'N/A')}")
         st.caption(f"_{movie.get('Plot', '')}_")
 
-    st.button("Rate a Different Movie", on_click=reset_app)
+    if worksheet:
+        with st.expander("⭐ See Community Ratings for this Movie"):
+            with st.spinner("Fetching leaderboard..."):
+                stats = get_leaderboard_stats(worksheet, movie["imdbID"])
+            if stats["count"] == 0:
+                st.write("Be the first to rate this movie!")
+            else:
+                # --- CONFIRMED: Leaderboard style with mean and top/bottom lists ---
+                st.metric(label=f"Average Score (from {stats['count']} ratings)", value=f"{stats['mean']:.1f} / 10.0")
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.subheader("Top Ratings"); [st.markdown(f"- **{r:.1f}**") for r in stats["top"]]
+                with c2:
+                    st.subheader("Lowest Ratings"); [st.markdown(f"- **{r:.1f}**") for r in stats["bottom"]]
+    
     st.divider()
 
-    # --- RATING WIDGETS ---
-    st.header("The LENS Movie Rating System 🎥")
-    for category_data in CATEGORY_DEFINITIONS:
-        name = category_data["name"]
-        max_score = category_data["max_score"]
-        widget_key = f"rating_{name}"
-
-        # Initialize widget state if it doesn't exist
-        if widget_key not in st.session_state:
-            st.session_state[widget_key] = max_score // 2 + 1
-        if name == "Action" and f"no_action_{name}" not in st.session_state:
-            st.session_state[f"no_action_{name}"] = False
-
+    st.header("Rate this Movie using The LENS Scale")
+    for cat_data in CATEGORY_DEFINITIONS:
+        name, max_score, key = cat_data["name"], cat_data["max_score"], f"rating_{cat_data['name']}"
+        if key not in st.session_state: st.session_state[key] = max_score // 2 + 1
+        if name == "Action" and f"no_action_{name}" not in st.session_state: st.session_state[f"no_action_{name}"] = False
         st.subheader(name)
         with st.expander("Show Rating Descriptors"):
-            for desc in category_data["descriptors"]:
-                st.write(f" - {desc}")
-
+            for desc in cat_data["descriptors"]: st.write(f" - {desc}")
         if name == "Action":
-            no_action = st.checkbox("This movie has no action.", key=f"no_action_{name}")
-            if not no_action:
-                st.slider(f"Rate {name}", 1, max_score, key=widget_key)
-        else:
-            st.slider(f"Rate {name}", 1, max_score, key=widget_key)
+            if not st.checkbox("This movie has no action.", key=f"no_action_{name}"):
+                st.slider(f"Rate {name}", 1, max_score, key=key)
+        else: st.slider(f"Rate {name}", 1, max_score, key=key)
         st.divider()
 
-    # --- CALCULATION & DISPLAY ---
-    if st.button("Calculate Final Score", type="primary", use_container_width=True):
-        rated_categories = []
+    if st.button("Calculate Final Score & Submit", type="primary", use_container_width=True):
+        rated_cats = []
         for cat_def in CATEGORY_DEFINITIONS:
             cat_name = cat_def["name"]
-            user_rating = None
-            if cat_name == "Action" and st.session_state.get(f"no_action_{cat_name}"):
-                user_rating = None
-            else:
-                user_rating = st.session_state.get(f"rating_{cat_name}")
-            rated_categories.append(
-                Category(
-                    name=cat_name, max_score=cat_def["max_score"], weight=cat_def["weight"],
-                    user_rating=user_rating, multipliers=cat_def.get("weight_multipliers", {})
-                )
-            )
-
-        rater = MovieRater(rated_categories)
-        final_score, summary_categories = rater.calculate_score()
-
-        st.header("🏆 Final Movie Score")
-        st.metric(label="LENS Score", value=f"{final_score:.1f} / 10.0")
-        st.info("Weights are dynamically adjusted based on your scores.", icon="⚖️")
-        st.header("📊 Rating Summary")
-        st.markdown("`Category: Your Score (Actual Weight Used)`")
+            rating = None if cat_name == "Action" and st.session_state.get(f"no_action_{cat_name}") else st.session_state.get(f"rating_{cat_name}")
+            rated_cats.append(Category(name=cat_name, max_score=cat_def["max_score"], weight=cat_def["weight"], user_rating=rating, multipliers=cat_def.get("weight_multipliers", {})))
         
-        col1, col2 = st.columns(2)
-        mid_point = (len(summary_categories) + 1) // 2
-        with col1:
-            for category in summary_categories[:mid_point]:
-                rating_display = str(category.user_rating) if category.user_rating is not None else "N/A"
-                weight_display = f"({category.dynamic_weight:.3f})" if category.user_rating is not None else ""
-                st.markdown(f"**{category.name}:** {rating_display} {weight_display}")
-        with col2:
-            for category in summary_categories[mid_point:]:
-                rating_display = str(category.user_rating) if category.user_rating is not None else "N/A"
-                weight_display = f"({category.dynamic_weight:.3f})" if category.user_rating is not None else ""
-                st.markdown(f"**{category.name}:** {rating_display} {weight_display}")
+        rater = MovieRater(rated_cats)
+        final_score, summary_cats = rater.calculate_score()
+
+        if worksheet:
+            try:
+                with st.spinner("Saving your rating to the leaderboard..."):
+                    save_rating_to_gsheet(worksheet, movie["imdbID"], movie["Title"], final_score)
+                st.success("Your rating has been saved!")
+            except Exception as e: st.error(f"Could not save your rating. Error: {e}")
+
+        st.header("🏆 Your Final Score"); st.metric(label="LENS Score", value=f"{final_score:.1f} / 10.0")
+        st.info("Weights are dynamically adjusted based on your scores.", icon="⚖️")
+        st.header("📊 Your Rating Summary"); st.markdown("`Category: Your Score (Actual Weight Used)`")
+        
+        c1, c2 = st.columns(2)
+        mid = (len(summary_cats) + 1) // 2
+        with c1:
+            for cat in summary_cats[:mid]:
+                r_disp = str(cat.user_rating) if cat.user_rating is not None else "N/A"
+                w_disp = f"({cat.dynamic_weight:.3f})" if cat.user_rating is not None else ""
+                st.markdown(f"**{cat.name}:** {r_disp} {w_disp}")
+        with c2:
+            for cat in summary_cats[mid:]:
+                r_disp = str(cat.user_rating) if cat.user_rating is not None else "N/A"
+                w_disp = f"({cat.dynamic_weight:.3f})" if cat.user_rating is not None else ""
+                st.markdown(f"**{cat.name}:** {r_disp} {w_disp}")
+
+        st.divider()
+        # --- MOVED: Reset button is now at the end ---
+        st.button("Rate a Different Movie", on_click=reset_app, use_container_width=True)
