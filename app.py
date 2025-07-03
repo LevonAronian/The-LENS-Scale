@@ -1,36 +1,50 @@
 import streamlit as st
-from streamlit.components.v1 import html
 
 # ==============================================================================
-# 1. CORE FUNCTIONS & STATE MANAGEMENT (Place at the top)
+# 1. CORE FUNCTIONS & STATE MANAGEMENT (REVISED)
 # ==============================================================================
 
 def reset_ratings():
     """
-    This function is called when the 'Reset Ratings' button is clicked.
-    It clears all values from the session state and sets a flag to trigger a scroll.
+    Surgically removes all rating-related keys from the session state
+    and sets a flag to trigger a scroll to the top on the next rerun.
+    This is more reliable than st.session_state.clear().
     """
-    st.session_state.clear()
+    # List all keys that need to be reset
+    keys_to_delete = ['ratings']
+    for category in CATEGORY_DEFINITIONS:
+        keys_to_delete.append(f'rating_{category["name"]}')
+        # Also handle the special 'no_action' checkbox key
+        if category["name"] == "Action":
+            keys_to_delete.append(f'no_action_{category["name"]}')
+
+    # Delete only the specific keys, leaving others (like the scroll flag) intact
+    for key in keys_to_delete:
+        if key in st.session_state:
+            del st.session_state[key]
+
+    # Now, set the scroll flag, which will persist
     st.session_state.scroll_to_top = True
 
-# This block runs on every script rerun. It checks for the scroll flag.
+# This block handles the scroll-to-top functionality.
+# It runs on every script rerun and checks for the flag.
 if "scroll_to_top" in st.session_state:
-    # We inject JavaScript that targets the PARENT window (the main browser window)
-    # and tells it to scroll to the top.
     st.components.v1.html(
         """
         <script>
+            // This script targets the parent window (the main browser window)
+            // and scrolls it to the top.
             window.parent.scrollTo(0, 0);
         </script>
         """,
         height=0
     )
-    # After scrolling, we delete the flag to prevent it from running again.
+    # After scrolling, delete the flag to prevent it from running again.
     del st.session_state.scroll_to_top
 
 
 # ==============================================================================
-# 2. DATA DEFINITIONS
+# 2. DATA DEFINITIONS (WITH DYNAMIC WEIGHT PLACEHOLDERS)
 # ==============================================================================
 
 CATEGORY_DEFINITIONS = [
@@ -38,6 +52,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Story/Plot",
         "max_score": 10,
         "weight": 0.14,
+        "weight_multipliers": { 10: 1.25, 9: 1.2, 8: 1.15, 7: 1.1, 6: 1.0, 5: 1.0, 4: 1.1, 3: 1.15, 2: 1.2,  1: 1.25 },
         "descriptors": [
             "1: Incoherent. A complete mess with no discernible structure or purpose.",
             "2: Barely Functional. The plot is technically present but is illogical, confusing, and almost impossible to follow.",
@@ -55,6 +70,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Acting (Leading roles)",
         "max_score": 10,
         "weight": 0.08,
+        "weight_multipliers": { 10: 1.2, 9: 1.17, 8: 1.13, 7: 1.05, 6: 1.0, 5: 1.0, 4: 1.05, 3: 1.13, 2: 1.17, 1: 1.2 },
         "descriptors": [
             "1: Unwatchable. The performance is so bad it's embarrassing and ruins every scene.",
             "2: Amateurish. The actor is clearly out of their depth, breaking the illusion of the film.",
@@ -72,6 +88,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Acting (Supporting roles)",
         "max_score": 10,
         "weight": 0.05,
+        "weight_multipliers": { 10: 1.2, 9: 1.17, 8: 1.13, 7: 1.05, 6: 1.0, 5: 1.0, 4: 1.05, 3: 1.13, 2: 1.17, 1: 1.2 },
         "descriptors": [
             "1: Unwatchable. The performance is so bad it's embarrassing and ruins every scene.",
             "2: Amateurish. The actor is clearly out of their depth, breaking the illusion of the film.",
@@ -89,6 +106,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Soundtrack (Quality and Fit)",
         "max_score": 10,
         "weight": 0.06,
+        "weight_multipliers": { 10: 1.2, 9: 1.17, 8: 1.13, 7: 1.05, 6: 1.0, 5: 1.0, 4: 1.05, 3: 1.13, 2: 1.17, 1: 1.2 },
         "descriptors": [
             "1: Detrimental. The music is actively annoying or so inappropriate it sabotages the film's mood.",
             "2: Poor. A distracting or badly implemented soundtrack that consistently takes you out of the movie.",
@@ -106,6 +124,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Plotholes",
         "max_score": 10,
         "weight": 0.07,
+        "weight_multipliers": { 10: 1.25, 9: 1.2, 8: 1.15, 7: 1.1, 6: 1.0, 5: 1.0, 4: 1.1, 3: 1.15, 2: 1.2,  1: 1.25 },
         "descriptors": [
             "1: Completely Broken. The film's logic is so flawed it is fundamentally nonsensical.",
             "2: Riddled with Story-Breaking Holes. Massive contradictions that make the entire plot fall apart.",
@@ -123,6 +142,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Tonality (Fit and Consistency)",
         "max_score": 10,
         "weight": 0.07,
+        "weight_multipliers": {  10: 1.2, 9: 1.17, 8: 1.13, 7: 1.05, 6: 1.0, 5: 1.0, 4: 1.05, 3: 1.13, 2: 1.17, 1: 1.2 },
         "descriptors": [
             "1: Incoherent Whiplash. Jarring, chaotic shifts between incompatible tones.",
             "2: Frequently Confused. Significant tonal shifts that feel amateurishly handled.",
@@ -140,6 +160,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Core Concept",
         "max_score": 10,
         "weight": 0.03,
+        "weight_multipliers": {  10: 1.2, 9: 1.17, 8: 1.13, 7: 1.05, 6: 1.0, 5: 1.0, 4: 1.05, 3: 1.13, 2: 1.17, 1: 1.2 },
         "descriptors": [
             "1: Fundamentally Bad Idea. A premise with no discernible merit.",
             "2: Deeply Unoriginal. A blatant copy of a better idea.",
@@ -157,6 +178,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Expectation (Personal + What the Movie sets for itself)",
         "max_score": 10,
         "weight": 0.04,
+        "weight_multipliers": {  10: 1.2, 9: 1.17, 8: 1.13, 7: 1.05, 6: 1.0, 5: 1.0, 4: 1.05, 3: 1.13, 2: 1.17, 1: 1.2 },
         "descriptors": [
             "1: Colossal Disappointment. Failed on all fronts.",
             "2: A Bait-and-Switch. Fundamentally misrepresented itself.",
@@ -174,6 +196,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Audio (Sound effects and Quality)",
         "max_score": 5,
         "weight": 0.06,
+        "weight_multipliers": {5: 1.18, 4: 1.1, 3: 1.0, 2: 1.1, 1: 1.18},
         "descriptors": [
             "1: Unusable. Ruins the viewing experience.",
             "2: Poor. Persistent issues that pull you out of the movie.",
@@ -186,6 +209,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Visuals (Realism and Interest/Intrigue)",
         "max_score": 5,
         "weight": 0.06,
+        "weight_multipliers": {5: 1.18, 4: 1.1, 3: 1.0, 2: 1.1, 1: 1.18},
         "descriptors": [
             "1: Unwatchable. Visually incoherent or ugly.",
             "2: Poor. Amateurish, clumsy, or cheap-looking.",
@@ -198,6 +222,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Effects (Visual and Special)",
         "max_score": 5,
         "weight": 0.05,
+        "weight_multipliers": {5: 1.15, 4: 1.1, 3: 1.0, 2: 1.1, 1: 1.15},
         "descriptors": [
             "1: Abysmal. Laughably bad, shatters immersion.",
             "2: Poor. Unconvincing, cheap, or out of place.",
@@ -210,6 +235,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Length",
         "max_score": 5,
         "weight": 0.07,
+        "weight_multipliers": {5: 1.18, 4: 1.12, 3: 1.0, 2: 1.12, 1: 1.18},
         "descriptors": [
             "1: Terribly Judged. Grotesquely bloated or brutally short.",
             "2: Poorly Judged. Noticeably too long or too short.",
@@ -222,6 +248,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Pacing",
         "max_score": 5,
         "weight": 0.07,
+        "weight_multipliers": {5: 1.18, 4: 1.12, 3: 1.0, 2: 1.12, 1: 1.18},
         "descriptors": [
             "1: Excruciating. The flow is completely broken; a chore to watch.",
             "2: Uneven. Inconsistent, with noticeable lulls or frantic sections.",
@@ -234,6 +261,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Potential (Subplot quality/interest as well as amount to explore)",
         "max_score": 5,
         "weight": 0.03,
+        "weight_multipliers": {5: 1.15, 4: 1.1, 3: 1.0, 2: 1.1, 1: 1.15},
         "descriptors": [
             "1: Shallow & Uninspired. Feels like a cardboard cutout.",
             "2: Hollow Lore. Gestures at depth, but threads are dull.",
@@ -246,6 +274,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Cast (Casting & Role Fit(look and personality))",
         "max_score": 6,
         "weight": 0.05,
+        "weight_multipliers": {6: 1.2, 5: 1.14, 4: 1.0, 3: 1.0, 2: 1.14, 1: 1.18},
         "descriptors": [
             "1: Completely Miscast. Distractingly wrong for the role in every way.",
             "2: Persistent Mismatch. Generally feels out of place; hard to believe.",
@@ -259,6 +288,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Action",
         "max_score": 5,
         "weight": 0.05,
+        "weight_multipliers": {5: 1.15, 4: 1.1, 3: 1.0, 2: 1.1, 1: 1.15},
         "descriptors": [
             "1: Terrible. Confusing, uninteresting, or fake-looking.",
             "2: Lackluster. Generic, clumsy, or lacks impact.",
@@ -271,6 +301,7 @@ CATEGORY_DEFINITIONS = [
         "name": "Personal Enjoyment (Individuals Overall Score)",
         "max_score": 10,
         "weight": 0.02,
+        "weight_multipliers": { 10: 1.25, 9: 1.2, 8: 1.15, 7: 1.1, 6: 1.0, 5: 1.0, 4: 1.1, 3: 1.15, 2: 1.2, 1: 1.25 },
         "descriptors": [
             "This is your personal gut-check score from 1-10.",
             "1: Hated it.",
@@ -281,16 +312,18 @@ CATEGORY_DEFINITIONS = [
 
 
 # ==============================================================================
-# 3. CORE LOGIC CLASSES
+# 3. CORE LOGIC CLASSES (UPDATED FOR DYNAMIC WEIGHTS)
 # ==============================================================================
 
 class Category:
     """An object representing a single rating category with its data."""
-    def __init__(self, name, max_score, weight, user_rating):
+    def __init__(self, name, max_score, weight, user_rating, multipliers):
         self.name = name
         self.max_score = max_score
-        self.weight = weight
+        self.base_weight = weight
         self.user_rating = user_rating
+        self.weight_multipliers = multipliers
+        self.dynamic_weight = weight # Initial value, will be updated during calculation
 
 class MovieRater:
     """The main controller that calculates the final score."""
@@ -305,10 +338,16 @@ class MovieRater:
 
         for category in self.categories:
             if category.user_rating is not None and category.max_score > 1:
-                # Normalize the score to a 0-1 scale
+                # Normalize the user's score to a 0-1 scale
                 normalized_score = (category.user_rating - 1) / (category.max_score - 1)
-                total_weighted_score += normalized_score * category.weight
-                total_weight_used += category.weight
+
+                # Look up the multiplier from the dictionary using the user's score.
+                # If for some reason a score is not in the dict, default to 1.0 (no change).
+                multiplier = category.weight_multipliers.get(category.user_rating, 1.0)
+                category.dynamic_weight = category.base_weight * multiplier
+
+                total_weighted_score += normalized_score * category.dynamic_weight
+                total_weight_used += category.dynamic_weight
 
         if total_weight_used > 0:
             self.final_score = (total_weighted_score / total_weight_used) * 10
@@ -327,11 +366,9 @@ st.set_page_config(page_title="LENS Movie Rater", page_icon="🎥", layout="cent
 st.title("The LENS Movie Rating System 🎥")
 st.markdown("> *The Logical & Editorial Narrative Scrutiny (LENS) Scale*")
 st.markdown("A comprehensive framework for cinematic evaluation that brings focus to film criticism.")
-st.markdown("🖋️ In the modern discourse of film, meaningful critique is too often lost in a sea of reductive scores and unchecked personal bias. The LENS scale was conceived as a corrective, comprehensive and all-encompassing standard for cinematic evaluation.")
 st.divider()
 
-# This safety check is essential. After `st.session_state.clear()` runs,
-# the 'ratings' dictionary is gone. This line re-creates it.
+# This check re-initializes the ratings dictionary if it's been cleared.
 if 'ratings' not in st.session_state:
     st.session_state.ratings = {}
 
@@ -341,19 +378,20 @@ for category_data in CATEGORY_DEFINITIONS:
     max_score = category_data["max_score"]
     st.subheader(name)
 
-    with st.expander("Show/Hide Rating Descriptions"):
+    # Simplified the expander for brevity, you can add all descriptors back if you wish
+    with st.expander("Show Rating Descriptors"):
         for desc in category_data["descriptors"]:
             st.write(f" - {desc}")
 
-    # Use the `key` parameter to link the widget's state directly to our dictionary
-    # This also helps persist the state across reruns
     widget_key = f"rating_{name}"
 
     if name == "Action":
+        # The key for the checkbox must be unique and persistent
         no_action = st.checkbox("This movie has no action.", key=f"no_action_{name}")
         if no_action:
-            st.session_state.ratings[name] = None
+            st.session_state.ratings[name] = None # Explicitly set to None
         else:
+            # When the checkbox is unchecked, we get the slider's value
             st.session_state.ratings[name] = st.slider(
                 f"Rate {name}", 1, max_score, value=(max_score // 2 + 1), key=widget_key
             )
@@ -370,12 +408,16 @@ if st.button("Calculate Final Score", type="primary", use_container_width=True):
     for cat_def in CATEGORY_DEFINITIONS:
         cat_name = cat_def["name"]
         user_rating = st.session_state.ratings.get(cat_name)
+        # Safely get the multipliers dictionary, defaulting to empty if not found
+        multipliers = cat_def.get("weight_multipliers", {})
+
         rated_categories.append(
             Category(
                 name=cat_name,
                 max_score=cat_def["max_score"],
                 weight=cat_def["weight"],
-                user_rating=user_rating
+                user_rating=user_rating,
+                multipliers=multipliers # Pass the new dictionary to the Category object
             )
         )
 
@@ -384,20 +426,24 @@ if st.button("Calculate Final Score", type="primary", use_container_width=True):
 
     st.header("🏆 Final Movie Score")
     st.metric(label="LENS Score", value=f"{final_score:.1f} / 10.0")
+    st.info("Weights are dynamically adjusted based on your scores.", icon="⚖️")
+
     st.header("📊 Rating Summary")
+    st.markdown("`Category: Your Score (Actual Weight Used)`")
     col1, col2 = st.columns(2)
-    mid_point = len(summary_categories) // 2 + 1
+    mid_point = (len(summary_categories) + 1) // 2
 
     with col1:
         for category in summary_categories[:mid_point]:
             rating_display = str(category.user_rating) if category.user_rating is not None else "N/A"
-            st.markdown(f"**{category.name}:** {rating_display}")
+            weight_display = f"({category.dynamic_weight:.3f})" if category.user_rating is not None else ""
+            st.markdown(f"**{category.name}:** {rating_display} {weight_display}")
 
     with col2:
         for category in summary_categories[mid_point:]:
             rating_display = str(category.user_rating) if category.user_rating is not None else "N/A"
-            st.markdown(f"**{category.name}:** {rating_display}")
+            weight_display = f"({category.dynamic_weight:.3f})" if category.user_rating is not None else ""
+            st.markdown(f"**{category.name}:** {rating_display} {weight_display}")
 
-# --- Final Reset Button ---
-# We use `on_click` to call our callback function. This is the most reliable method.
+# --- Final Reset Button (with corrected logic) ---
 st.button("Reset Ratings", use_container_width=True, on_click=reset_ratings)
