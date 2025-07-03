@@ -271,7 +271,6 @@ CATEGORY_DEFINITIONS = [
     }
 ]
 
-
 # ==============================================================================
 # 1. API, DATABASE, & CORE FUNCTIONS
 # ==============================================================================
@@ -312,22 +311,20 @@ def save_rating_to_gsheet(worksheet, imdb_id, movie_title, user_name, rating):
     new_row = [imdb_id, movie_title, user_name, float(rating), timestamp]
     worksheet.append_row(new_row, value_input_option='USER_ENTERED')
 
-# --- FIX: REMOVED @st.cache_data DECORATOR ---
-# This ensures the name check always uses live data.
+# --- READING FUNCTIONS (COMMENTED OUT) ---
+"""
 def get_all_ratings(_worksheet):
     return pd.DataFrame(_worksheet.get_all_records())
 
 def check_if_name_exists(worksheet, imdb_id, user_name):
-    """Checks if a user name has already rated a specific movie (case-insensitive)."""
     if user_name.strip() == "": return False
     all_ratings_df = get_all_ratings(worksheet)
     if all_ratings_df.empty or "imdbID" not in all_ratings_df.columns or "userName" not in all_ratings_df.columns: return False
-    
     all_ratings_df['imdbID'] = all_ratings_df['imdbID'].astype(str).str.strip()
     movie_ratings = all_ratings_df[all_ratings_df['imdbID'] == str(imdb_id).strip()]
-
     if movie_ratings.empty: return False
     return movie_ratings['userName'].str.lower().eq(user_name.lower()).any()
+"""
 
 # --- Core App Functions ---
 def reset_app():
@@ -368,39 +365,32 @@ class MovieRater:
         return self.final_score, self.categories
 
 # ==============================================================================
-# 3. HELPER FUNCTION FOR DISPLAYING LEADERBOARD
+# 3. HELPER FUNCTION FOR DISPLAYING LEADERBOARD (COMMENTED OUT)
 # ==============================================================================
+"""
 def display_leaderboard(worksheet, movie_id):
-    """Calculates and displays the leaderboard stats for a specific movie."""
     all_ratings_df = get_all_ratings(worksheet)
-    
     st.header("⭐ Community Leaderboard")
     if all_ratings_df.empty or "imdbID" not in all_ratings_df.columns:
         st.info("No ratings have been submitted for this movie yet.")
         return
-    
     all_ratings_df['imdbID'] = all_ratings_df['imdbID'].astype(str).str.strip()
     movie_ratings = all_ratings_df[all_ratings_df['imdbID'] == str(movie_id).strip()].copy()
-    
     if movie_ratings.empty:
         st.info("No ratings have been submitted for this movie yet.")
         return
-    
     movie_ratings["rating"] = pd.to_numeric(movie_ratings["rating"])
     count = len(movie_ratings)
     mean_score = movie_ratings["rating"].mean()
     top_10 = movie_ratings.nlargest(10, "rating")[["userName", "rating"]].to_records(index=False).tolist()
     bottom_10 = movie_ratings.nsmallest(10, "rating")[["userName", "rating"]].to_records(index=False).tolist()
-    
     st.metric(label=f"Average Score (from {count} ratings)", value=f"{mean_score:.1f} / 10.0")
-    
     c1, c2 = st.columns(2)
     with c1:
-        st.subheader("Top Ratings")
-        for name, score in top_10: st.markdown(f"- **{name}:** {score:.1f}")
+        st.subheader("Top Ratings"); [st.markdown(f"- **{name}:** {score:.1f}") for name, score in top_10]
     with c2:
-        st.subheader("Lowest Ratings")
-        for name, score in bottom_10: st.markdown(f"- **{name}:** {score:.1f}")
+        st.subheader("Lowest Ratings"); [st.markdown(f"- **{name}:** {score:.1f}") for name, score in bottom_10]
+"""
 
 # ==============================================================================
 # 4. STREAMLIT APP LAYOUT
@@ -446,7 +436,7 @@ else:
     try:
         worksheet = connect_to_gsheet()
     except Exception as e:
-        st.error(f"Could not connect to the database. Leaderboard features are disabled. Error: {e}")
+        st.error(f"Could not connect to the database. Error: {e}")
 
     # Movie Header
     col1, col2 = st.columns([1, 3])
@@ -460,10 +450,13 @@ else:
     st.divider()
     st.header("Rate this Movie using The LENS Scale")
     
-    user_name = st.text_input("Your Name (for the leaderboard)", key="user_name").strip()
-    name_is_taken = False
-    if user_name and worksheet:
-        name_is_taken = check_if_name_exists(worksheet, movie["imdbID"], user_name)
+    # User name input is still present
+    user_name = st.text_input("Your Name (for saving your score)", key="user_name").strip()
+    
+    # --- NAME CHECK LOGIC (COMMENTED OUT) ---
+    # name_is_taken = False
+    # if user_name and worksheet:
+    #     name_is_taken = check_if_name_exists(worksheet, movie["imdbID"], user_name)
     
     # Rating Sliders
     for cat_data in CATEGORY_DEFINITIONS:
@@ -481,9 +474,10 @@ else:
     
     # Calculate Button & Submission Logic
     is_name_missing = not user_name
-    button_disabled = is_name_missing or name_is_taken
+    # The button is now only disabled if the name is missing
+    button_disabled = is_name_missing
     
-    if st.button("Calculate Final Score & Submit", type="primary", use_container_width=True, disabled=button_disabled):
+    if st.button("Calculate & Save Score", type="primary", use_container_width=True, disabled=button_disabled):
         rated_cats = []
         for cat_def in CATEGORY_DEFINITIONS:
             cat_name = cat_def["name"]
@@ -497,11 +491,11 @@ else:
             try:
                 with st.spinner("Saving your rating..."):
                     save_rating_to_gsheet(worksheet, movie["imdbID"], movie["Title"], user_name, final_score)
-                st.success("Your rating has been saved!")
+                st.success("Your rating has been saved to the database!")
             except Exception as e:
                 st.error(f"Could not save your rating. Error: {e}")
 
-        # Display results and final leaderboard
+        # Display results
         st.header("🏆 Your Final Score")
         st.metric(label="LENS Score", value=f"{final_score:.1f} / 10.0")
         st.header("📊 Your Rating Summary")
@@ -517,14 +511,15 @@ else:
                 st.markdown(f"**{cat.name}:** {r_disp} {w_disp}")
         
         st.divider()
-        if worksheet:
-            # We don't need to clear the cache anymore because get_all_ratings is no longer cached
-            display_leaderboard(worksheet, movie["imdbID"])
+        # --- LEADERBOARD DISPLAY (COMMENTED OUT) ---
+        # if worksheet:
+        #     display_leaderboard(worksheet, movie["imdbID"])
         
         st.button("Rate a Different Movie", on_click=reset_app, use_container_width=True)
 
-    # Display validation errors after the button
+    # Only show the name missing warning
     if is_name_missing:
-        st.warning("Please enter your name to enable the submit button.")
-    if name_is_taken:
-        st.error(f"The name '{user_name}' has already rated this movie. Please choose a different name or add a number to yours (e.g., '{user_name}2').")
+        st.warning("Please enter your name to enable the save button.")
+    # --- NAME CHECK ERROR (COMMENTED OUT) ---
+    # if name_is_taken:
+    #     st.error(f"The name '{user_name}' has already rated this movie.")
