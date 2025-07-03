@@ -1,50 +1,7 @@
 import streamlit as st
 
 # ==============================================================================
-# 1. CORE FUNCTIONS & STATE MANAGEMENT (REVISED)
-# ==============================================================================
-
-def reset_ratings():
-    """
-    Surgically removes all rating-related keys from the session state
-    and sets a flag to trigger a scroll to the top on the next rerun.
-    This is more reliable than st.session_state.clear().
-    """
-    # List all keys that need to be reset
-    keys_to_delete = ['ratings']
-    for category in CATEGORY_DEFINITIONS:
-        keys_to_delete.append(f'rating_{category["name"]}')
-        # Also handle the special 'no_action' checkbox key
-        if category["name"] == "Action":
-            keys_to_delete.append(f'no_action_{category["name"]}')
-
-    # Delete only the specific keys, leaving others (like the scroll flag) intact
-    for key in keys_to_delete:
-        if key in st.session_state:
-            del st.session_state[key]
-
-    # Now, set the scroll flag, which will persist
-    st.session_state.scroll_to_top = True
-
-# This block handles the scroll-to-top functionality.
-# It runs on every script rerun and checks for the flag.
-if "scroll_to_top" in st.session_state:
-    st.components.v1.html(
-        """
-        <script>
-            // This script targets the parent window (the main browser window)
-            // and scrolls it to the top.
-            window.parent.scrollTo(0, 0);
-        </script>
-        """,
-        height=0
-    )
-    # After scrolling, delete the flag to prevent it from running again.
-    del st.session_state.scroll_to_top
-
-
-# ==============================================================================
-# 2. DATA DEFINITIONS (WITH DYNAMIC WEIGHT PLACEHOLDERS)
+# 1. DATA DEFINITIONS (WITH DYNAMIC WEIGHT PLACEHOLDERS)
 # ==============================================================================
 
 CATEGORY_DEFINITIONS = [
@@ -312,7 +269,41 @@ CATEGORY_DEFINITIONS = [
 
 
 # ==============================================================================
-# 3. CORE LOGIC CLASSES (UPDATED FOR DYNAMIC WEIGHTS)
+# 2. RESET BUTTON LOGIC
+# ==============================================================================
+
+def reset_ratings():
+    """
+    This function is called when the 'Reset Ratings' button is clicked.
+    It iterates through all categories and SETS their corresponding state keys
+    back to their default values. This is more reliable for UI updates.
+    """
+    for category in CATEGORY_DEFINITIONS:
+        name = category["name"]
+        max_score = category["max_score"]
+        widget_key = f"rating_{name}"
+
+        # Set the slider's value back to the calculated default
+        st.session_state[widget_key] = max_score // 2 + 1
+
+        # Also reset the special 'no_action' checkbox
+        if name == "Action":
+            st.session_state[f"no_action_{name}"] = False
+
+    # Set the scroll flag to trigger on the next rerun
+    st.session_state.scroll_to_top = True
+
+# This block handles the scroll-to-top functionality.
+if "scroll_to_top" in st.session_state:
+    st.components.v1.html(
+        '<script>window.parent.scrollTo(0, 0);</script>',
+        height=0
+    )
+    del st.session_state.scroll_to_top
+
+
+# ==============================================================================
+# 3. CORE LOGIC CLASSES (No changes needed here)
 # ==============================================================================
 
 class Category:
@@ -323,7 +314,7 @@ class Category:
         self.base_weight = weight
         self.user_rating = user_rating
         self.weight_multipliers = multipliers
-        self.dynamic_weight = weight # Initial value, will be updated during calculation
+        self.dynamic_weight = weight
 
 class MovieRater:
     """The main controller that calculates the final score."""
@@ -332,20 +323,13 @@ class MovieRater:
         self.final_score = 0.0
 
     def calculate_score(self):
-        """Calculates the final movie score based on all collected ratings."""
         total_weighted_score = 0.0
         total_weight_used = 0.0
-
         for category in self.categories:
             if category.user_rating is not None and category.max_score > 1:
-                # Normalize the user's score to a 0-1 scale
                 normalized_score = (category.user_rating - 1) / (category.max_score - 1)
-
-                # Look up the multiplier from the dictionary using the user's score.
-                # If for some reason a score is not in the dict, default to 1.0 (no change).
                 multiplier = category.weight_multipliers.get(category.user_rating, 1.0)
                 category.dynamic_weight = category.base_weight * multiplier
-
                 total_weighted_score += normalized_score * category.dynamic_weight
                 total_weight_used += category.dynamic_weight
 
@@ -353,7 +337,6 @@ class MovieRater:
             self.final_score = (total_weighted_score / total_weight_used) * 10
         else:
             self.final_score = 0.0
-
         return self.final_score, self.categories
 
 
@@ -365,39 +348,35 @@ st.set_page_config(page_title="LENS Movie Rater", page_icon="🎥", layout="cent
 
 st.title("The LENS Movie Rating System 🎥")
 st.markdown("> *The Logical & Editorial Narrative Scrutiny (LENS) Scale*")
-st.markdown("A comprehensive framework for cinematic evaluation that brings focus to film criticism.")
 st.divider()
 
-# This check re-initializes the ratings dictionary if it's been cleared.
-if 'ratings' not in st.session_state:
-    st.session_state.ratings = {}
-
 # --- Dynamically create sliders for each category ---
+# We just create the widgets here. Their state is managed automatically by their key.
 for category_data in CATEGORY_DEFINITIONS:
     name = category_data["name"]
     max_score = category_data["max_score"]
-    st.subheader(name)
+    widget_key = f"rating_{name}"
 
-    # Simplified the expander for brevity, you can add all descriptors back if you wish
+    # Set a default value for each widget if it doesn't exist in the state yet
+    if widget_key not in st.session_state:
+        st.session_state[widget_key] = max_score // 2 + 1
+    if name == "Action" and f"no_action_{name}" not in st.session_state:
+        st.session_state[f"no_action_{name}"] = False
+
+    st.subheader(name)
     with st.expander("Show Rating Descriptors"):
         for desc in category_data["descriptors"]:
             st.write(f" - {desc}")
 
-    widget_key = f"rating_{name}"
-
     if name == "Action":
-        # The key for the checkbox must be unique and persistent
         no_action = st.checkbox("This movie has no action.", key=f"no_action_{name}")
-        if no_action:
-            st.session_state.ratings[name] = None # Explicitly set to None
-        else:
-            # When the checkbox is unchecked, we get the slider's value
-            st.session_state.ratings[name] = st.slider(
-                f"Rate {name}", 1, max_score, value=(max_score // 2 + 1), key=widget_key
+        if not no_action:
+            st.slider(
+                f"Rate {name}", 1, max_score, key=widget_key
             )
     else:
-        st.session_state.ratings[name] = st.slider(
-            f"Rate {name}", 1, max_score, value=(max_score // 2 + 1), key=widget_key
+        st.slider(
+            f"Rate {name}", 1, max_score, key=widget_key
         )
 
     st.divider()
@@ -407,9 +386,14 @@ if st.button("Calculate Final Score", type="primary", use_container_width=True):
     rated_categories = []
     for cat_def in CATEGORY_DEFINITIONS:
         cat_name = cat_def["name"]
-        user_rating = st.session_state.ratings.get(cat_name)
-        # Safely get the multipliers dictionary, defaulting to empty if not found
-        multipliers = cat_def.get("weight_multipliers", {})
+        widget_key = f"rating_{cat_name}"
+        user_rating = None # Default to None
+
+        # Determine the user's rating for this category
+        if cat_name == "Action" and st.session_state.get(f"no_action_{cat_name}"):
+            user_rating = None
+        else:
+            user_rating = st.session_state.get(widget_key)
 
         rated_categories.append(
             Category(
@@ -417,7 +401,7 @@ if st.button("Calculate Final Score", type="primary", use_container_width=True):
                 max_score=cat_def["max_score"],
                 weight=cat_def["weight"],
                 user_rating=user_rating,
-                multipliers=multipliers # Pass the new dictionary to the Category object
+                multipliers=cat_def.get("weight_multipliers", {})
             )
         )
 
@@ -433,6 +417,7 @@ if st.button("Calculate Final Score", type="primary", use_container_width=True):
     col1, col2 = st.columns(2)
     mid_point = (len(summary_categories) + 1) // 2
 
+    # Display logic remains the same
     with col1:
         for category in summary_categories[:mid_point]:
             rating_display = str(category.user_rating) if category.user_rating is not None else "N/A"
