@@ -2,9 +2,10 @@ import streamlit as st
 import requests
 
 # ==============================================================================
-# 0. DATA DEFINITIONS (Keep this at the top)
+# 0. DATA DEFINITIONS (PASTE YOUR FULL LIST HERE)
 # ==============================================================================
 
+# <<< PASTE YOUR COMPLETE, UNABRIDGED CATEGORY_DEFINITIONS LIST HERE >>>
 CATEGORY_DEFINITIONS = [
     {
         "name": "Story/Plot",
@@ -268,20 +269,19 @@ CATEGORY_DEFINITIONS = [
     }
 ]
 
-
-
 # ==============================================================================
 # 1. API & CORE FUNCTIONS
 # ==============================================================================
 
 def search_omdb(api_key, query):
-    """Searches OMDb for a movie and returns a list of results."""
+    """Searches OMDb for movies matching the query."""
     if not api_key or not query:
         return []
     url = f"http://www.omdbapi.com/?s={query.strip()}&type=movie&apikey={api_key}"
     try:
         response = requests.get(url)
-        response.raise_for_status()  # Raises an exception for bad status codes
+        # Raises an exception for bad responses (4xx or 5xx)
+        response.raise_for_status()
         data = response.json()
         if data.get("Response") == "True":
             return data.get("Search", [])
@@ -306,7 +306,16 @@ def get_movie_details(api_key, imdb_id):
 
 def reset_app():
     """Resets the entire app state to go back to the search screen."""
-    # Reset rating widgets
+    # List of all state keys to reset or delete
+    keys_to_reset = [
+        "movie_selected", "search_query", "last_searched_query",
+        "search_results", "selected_movie_details"
+    ]
+    for key in keys_to_reset:
+        if key in st.session_state:
+            del st.session_state[key]
+    
+    # Also explicitly reset the rating widgets to their default values
     for category in CATEGORY_DEFINITIONS:
         name = category["name"]
         max_score = category["max_score"]
@@ -314,100 +323,104 @@ def reset_app():
         if name == "Action":
             st.session_state[f"no_action_{name}"] = False
     
-    # Reset search and selection state
-    st.session_state.movie_selected = False
-    st.session_state.search_query = ""
-    st.session_state.search_results = []
-    st.session_state.selected_movie_id = None
-    st.session_state.selected_movie_details = None
-    st.session_state.scroll_to_top = True # Scroll to top on reset
+    # Set the scroll flag to trigger on the next rerun
+    st.session_state.scroll_to_top = True
 
 
-# Scroll to top logic
+# This block handles the scroll-to-top functionality.
 if "scroll_to_top" in st.session_state:
     st.components.v1.html('<script>window.parent.scrollTo(0, 0);</script>', height=0)
     del st.session_state.scroll_to_top
 
-# ==============================================================================
-# 2. STATE INITIALIZATION
-# ==============================================================================
-
-# Initialize all necessary state keys at the beginning
-if 'movie_selected' not in st.session_state:
-    st.session_state.movie_selected = False
-if 'search_query' not in st.session_state:
-    st.session_state.search_query = ""
-if 'search_results' not in st.session_state:
-    st.session_state.search_results = []
-if 'selected_movie_id' not in st.session_state:
-    st.session_state.selected_movie_id = None
-if 'selected_movie_details' not in st.session_state:
-    st.session_state.selected_movie_details = None
 
 # ==============================================================================
-# 3. CORE LOGIC CLASSES (No changes needed)
+# 2. CORE LOGIC CLASSES (No changes needed)
 # ==============================================================================
 
 class Category:
-    # ... (Your Category class code here) ...
+    """An object representing a single rating category with its data."""
     def __init__(self, name, max_score, weight, user_rating, multipliers):
-        self.name, self.max_score, self.base_weight, self.user_rating, self.weight_multipliers = name, max_score, weight, user_rating, multipliers
+        self.name = name
+        self.max_score = max_score
+        self.base_weight = weight
+        self.user_rating = user_rating
+        self.weight_multipliers = multipliers
         self.dynamic_weight = weight
 
 class MovieRater:
-    # ... (Your MovieRater class code here) ...
+    """The main controller that calculates the final score."""
     def __init__(self, categories):
-        self.categories, self.final_score = categories, 0.0
+        self.categories = categories
+        self.final_score = 0.0
+
     def calculate_score(self):
-        # ... (Your calculate_score logic here) ...
+        total_weighted_score = 0.0
+        total_weight_used = 0.0
+        for category in self.categories:
+            if category.user_rating is not None and category.max_score > 1:
+                normalized_score = (category.user_rating - 1) / (category.max_score - 1)
+                multiplier = category.weight_multipliers.get(category.user_rating, 1.0)
+                category.dynamic_weight = category.base_weight * multiplier
+                total_weighted_score += normalized_score * category.dynamic_weight
+                total_weight_used += category.dynamic_weight
+
+        if total_weight_used > 0:
+            self.final_score = (total_weighted_score / total_weight_used) * 10
+        else:
+            self.final_score = 0.0
         return self.final_score, self.categories
 
+
 # ==============================================================================
-# 4. STREAMLIT APP LAYOUT (Main control flow)
+# 3. STREAMLIT APP LAYOUT (Main control flow)
 # ==============================================================================
 
 st.set_page_config(page_title="LENS Movie Rater", page_icon="🎥", layout="centered")
 
-# Try to get API key from secrets
+# Securely load the API key from Streamlit's secrets management
 OMDB_API_KEY = st.secrets.get("OMDB_API_KEY", "")
 
+
 # --- VIEW 1: MOVIE SEARCH SCREEN ---
-if not st.session_state.movie_selected:
+if "movie_selected" not in st.session_state or not st.session_state.movie_selected:
     st.title("Search for a Movie to Rate 🔎")
     
     if not OMDB_API_KEY:
         st.error("OMDb API key not found. Please add it to your Streamlit secrets.")
-    
-    # Search form
-    with st.form(key="search_form"):
-        search_query = st.text_input("Movie Title", st.session_state.search_query)
-        submit_button = st.form_submit_button("Search", disabled=(not OMDB_API_KEY))
+        st.stop() # Halt execution if no key is present
 
-    if submit_button and search_query:
-        st.session_state.search_query = search_query
+    # Dynamic text input. The script reruns on every character typed.
+    search_query = st.text_input("Movie Title", key="search_query", help="Start typing to see results...")
+
+    # --- Dynamic Search Logic ---
+    # Only trigger a search if the query is long enough AND has changed.
+    if len(search_query) >= 3 and search_query != st.session_state.get('last_searched_query'):
         with st.spinner("Searching..."):
             st.session_state.search_results = search_omdb(OMDB_API_KEY, search_query)
+            st.session_state.last_searched_query = search_query
     
-    # Display search results
-    if st.session_state.search_results:
+    # If the user clears the search bar, also clear the results for a clean UI.
+    if not search_query:
+        st.session_state.search_results = []
+
+    # --- Display Search Results ---
+    if st.session_state.get('search_results'):
         st.subheader("Search Results")
         for movie in st.session_state.search_results:
             col1, col2 = st.columns([1, 4])
             with col1:
-                # Use a default poster if one isn't available
                 poster_url = movie.get("Poster") if movie.get("Poster") != "N/A" else "https://i.imgur.com/u1T0t5f.png"
                 st.image(poster_url, width=100)
             with col2:
                 st.write(f"**{movie['Title']}** ({movie['Year']})")
                 if st.button("Select to Rate", key=movie['imdbID']):
-                    # When a movie is selected, get its full details
-                    st.session_state.selected_movie_id = movie['imdbID']
                     with st.spinner("Loading movie details..."):
                          details = get_movie_details(OMDB_API_KEY, movie['imdbID'])
                          if details:
+                            # Store details and switch view
                             st.session_state.selected_movie_details = details
                             st.session_state.movie_selected = True
-                            st.experimental_rerun() # Force an immediate rerun to switch to the rating view
+                            st.experimental_rerun()
                          else:
                             st.error("Could not fetch details for this movie.")
 
@@ -425,7 +438,6 @@ else:
         st.title(movie.get("Title", "N/A"))
         st.subheader(f"({movie.get('Year', 'N/A')})")
         st.write(f"**Director:** {movie.get('Director', 'N/A')}")
-        st.write(f"**Starring:** {movie.get('Actors', 'N/A')}")
         st.caption(f"_{movie.get('Plot', '')}_")
 
     st.button("Rate a Different Movie", on_click=reset_app)
@@ -433,22 +445,65 @@ else:
 
     # --- RATING WIDGETS ---
     st.header("The LENS Movie Rating System 🎥")
-    # (The rest of your slider-generation and calculation logic goes here, unchanged)
-    # For brevity, I'll show the start of it.
     for category_data in CATEGORY_DEFINITIONS:
         name = category_data["name"]
         max_score = category_data["max_score"]
         widget_key = f"rating_{name}"
 
+        # Initialize widget state if it doesn't exist
         if widget_key not in st.session_state:
             st.session_state[widget_key] = max_score // 2 + 1
-        # ... (The rest of your slider logic from the previous script) ...
+        if name == "Action" and f"no_action_{name}" not in st.session_state:
+            st.session_state[f"no_action_{name}"] = False
+
         st.subheader(name)
-        # etc...
-    
-    st.divider()
+        with st.expander("Show Rating Descriptors"):
+            for desc in category_data["descriptors"]:
+                st.write(f" - {desc}")
+
+        if name == "Action":
+            no_action = st.checkbox("This movie has no action.", key=f"no_action_{name}")
+            if not no_action:
+                st.slider(f"Rate {name}", 1, max_score, key=widget_key)
+        else:
+            st.slider(f"Rate {name}", 1, max_score, key=widget_key)
+        st.divider()
 
     # --- CALCULATION & DISPLAY ---
     if st.button("Calculate Final Score", type="primary", use_container_width=True):
-        # ... (Your calculation and display logic here, unchanged) ...
-        pass
+        rated_categories = []
+        for cat_def in CATEGORY_DEFINITIONS:
+            cat_name = cat_def["name"]
+            user_rating = None
+            if cat_name == "Action" and st.session_state.get(f"no_action_{cat_name}"):
+                user_rating = None
+            else:
+                user_rating = st.session_state.get(f"rating_{cat_name}")
+            rated_categories.append(
+                Category(
+                    name=cat_name, max_score=cat_def["max_score"], weight=cat_def["weight"],
+                    user_rating=user_rating, multipliers=cat_def.get("weight_multipliers", {})
+                )
+            )
+
+        rater = MovieRater(rated_categories)
+        final_score, summary_categories = rater.calculate_score()
+
+        st.header("🏆 Final Movie Score")
+        st.metric(label="LENS Score", value=f"{final_score:.1f} / 10.0")
+        st.info("Weights are dynamically adjusted based on your scores.", icon="⚖️")
+        st.header("📊 Rating Summary")
+        st.markdown("`Category: Your Score (Actual Weight Used)`")
+        
+        col1, col2 = st.columns(2)
+        mid_point = (len(summary_categories) + 1) // 2
+        with col1:
+            for category in summary_categories[:mid_point]:
+                rating_display = str(category.user_rating) if category.user_rating is not None else "N/A"
+                weight_display = f"({category.dynamic_weight:.3f})" if category.user_rating is not None else ""
+                st.markdown(f"**{category.name}:** {rating_display} {weight_display}")
+        with col2:
+            for category in summary_categories[mid_point:]:
+                rating_display = str(category.user_rating) if category.user_rating is not None else "N/A"
+                weight_display = f"({category.dynamic_weight:.3f})" if category.user_rating is not None else ""
+                st.markdown(f"**{category.name}:** {rating_display} {weight_display}")
