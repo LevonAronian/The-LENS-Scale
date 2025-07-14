@@ -276,6 +276,7 @@ CATEGORY_DEFINITIONS = [
 # ==============================================================================
 
 # --- OMDb API Functions ---
+# Note: No caching decorator here is correct, as we want fresh results.
 def search_omdb(api_key, query):
     if not api_key or not query: return []
     url = f"http://www.omdbapi.com/?s={query.strip()}&type=movie&apikey={api_key}"
@@ -328,7 +329,7 @@ def save_rating_to_gsheet(worksheet, imdb_id, movie_title, user_name, rating):
 
 # --- Core App Functions ---
 def reset_app():
-    keys_to_delete = ["movie_selected", "search_query", "last_searched_query", "search_results", "selected_movie_details", "user_name"]
+    keys_to_delete = ["movie_selected", "search_query_input", "search_results", "selected_movie_details", "user_name"]
     for key in keys_to_delete:
         if key in st.session_state: del st.session_state[key]
     for category in CATEGORY_DEFINITIONS:
@@ -400,34 +401,46 @@ OMDB_API_KEY = st.secrets.get("OMDB_API_KEY", "")
 
 # --- VIEW 1: SEARCH SCREEN ---
 if not st.session_state.get("movie_selected"):
-    st.title("The LENS Movie Rating System 🎥")
+    st.title("The LENS Movie Rating Scale 🎥")
     st.markdown("> *The Logical & Editorial Narrative Scrutiny (LENS) Scale*")
     st.markdown("A comprehensive framework for cinematic evaluation that brings focus to film criticism.")
     st.markdown("🖋️ In the modern discourse of film, meaningful critique is too often lost in a sea of reductive scores and unchecked personal bias. The LENS scale was conceived as a corrective, comprehensive and all-encompassing standard for cinematic evaluation.")
     st.divider()
     st.header("Search for a Movie to Rate 🔎")
     
-    search_query = st.text_input("Movie Title", key="search_query")
-    if len(search_query) >= 3 and search_query != st.session_state.get('last_searched_query'):
+    # --- CHANGED: REFACTORED SEARCH LOGIC USING A FORM ---
+    # This prevents the API from being called on every keystroke and makes the
+    # search action deliberate, avoiding caching issues.
+    with st.form(key="search_form"):
+        search_query = st.text_input("Movie Title", key="search_query_input")
+        submit_button = st.form_submit_button(label="Search", use_container_width=True)
+
+    if submit_button and search_query:
         with st.spinner("Searching..."):
+            # The search function is now only called ONCE on submit
             st.session_state.search_results = search_omdb(OMDB_API_KEY, search_query)
-            st.session_state.last_searched_query = search_query
-    if not search_query: st.session_state.search_results = []
-    
+
+    # Display results if they exist in the session state
     if st.session_state.get('search_results'):
-        st.subheader("Search Results")
-        for movie_result in st.session_state.search_results:
-            col1, col2 = st.columns([1, 4]);
-            with col1: st.image(movie_result.get("Poster") if movie_result.get("Poster") != "N/A" else "https://i.imgur.com/u1T0t5f.png", width=100)
-            with col2:
-                st.write(f"**{movie_result['Title']}** ({movie_result['Year']})")
-                if st.button("Select to Rate", key=movie_result['imdbID']):
-                    with st.spinner("Loading..."):
-                        details = get_movie_details(OMDB_API_KEY, movie_result['imdbID'])
-                        if details:
-                            st.session_state.selected_movie_details = details
-                            st.session_state.movie_selected = True
-                            st.rerun()
+        if not st.session_state.search_results:
+             st.warning("No movies found for that title. Please try again.")
+        else:
+            st.subheader("Search Results")
+            for movie_result in st.session_state.search_results:
+                col1, col2 = st.columns([1, 4])
+                with col1:
+                    st.image(movie_result.get("Poster") if movie_result.get("Poster") != "N/A" else "https://i.imgur.com/u1T0t5f.png", width=100)
+                with col2:
+                    st.write(f"**{movie_result['Title']}** ({movie_result['Year']})")
+                    if st.button("Select to Rate", key=movie_result['imdbID']):
+                        with st.spinner("Loading movie details..."):
+                            details = get_movie_details(OMDB_API_KEY, movie_result['imdbID'])
+                            if details:
+                                st.session_state.selected_movie_details = details
+                                st.session_state.movie_selected = True
+                                # Clear search results so they don't reappear after rating
+                                st.session_state.search_results = []
+                                st.rerun()
 
 # --- VIEW 2: MOVIE RATING SCREEN ---
 else:
