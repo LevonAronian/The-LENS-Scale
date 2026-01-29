@@ -21,3 +21,6 @@ This is achieved by analyzing two distinct, yet complementary, facets of a film:
 *   **✨ Subjective Resonance:** Acknowledging and quantifying the viewer's personal connection, emotional response, and ultimate enjoyment.
 
 By viewing a film through these two lenses, we move past the simple question of "Was it good?" and toward a more profound understanding of *why* it succeeded or failed, both as a work of art and as a piece of entertainment.
+
+
+thelensscale.streamlit.app
