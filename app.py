@@ -355,38 +355,38 @@ class MovieRater:
         self.categories = categories
         self.final_score = 0.0
 
-    def calculate_score(self):
-        total_weighted_score = 0.0
-        total_weight_used = 0.0
+   def calculate_score(self):
+    total_weighted_score = 0.0
+    total_weight_used = 0.0
+    
+    for cat in self.categories:
+        if cat.user_rating is not None and cat.max_score > 1:
+            # Normalize rating to 0-1 scale
+            norm_score = (cat.user_rating - 1) / (cat.max_score - 1)
+            
+            # Apply multipliers (Make sure these are high in your definition!)
+            multiplier = cat.weight_multipliers.get(cat.user_rating, 1.0)
+            cat.dynamic_weight = cat.base_weight * multiplier
+            
+            total_weighted_score += norm_score * cat.dynamic_weight
+            total_weight_used += cat.dynamic_weight
+    
+    raw_average = (total_weighted_score / total_weight_used) if total_weight_used > 0 else 0.5
+    
+    # === THE FIX: STEERABLE S-CURVE ===
+    # sensitivity > 1 makes the curve steeper (pushes scores to 0 or 10)
+    # Try 1.5 for moderate, 2.0 for aggressive polarization
+    sensitivity = 1.8 
+    
+    if raw_average > 0.5:
+        # Push higher
+        polarized_score = 0.5 + 0.5 * pow((raw_average - 0.5) / 0.5, 1/sensitivity)
+    else:
+        # Push lower
+        polarized_score = 0.5 - 0.5 * pow((0.5 - raw_average) / 0.5, 1/sensitivity)
         
-        for cat in self.categories:
-            if cat.user_rating is not None and cat.max_score > 1:
-                # Normalize rating to 0-1 scale
-                norm_score = (cat.user_rating - 1) / (cat.max_score - 1)
-                
-                # Apply multipliers
-                multiplier = cat.weight_multipliers.get(cat.user_rating, 1.0)
-                cat.dynamic_weight = cat.base_weight * multiplier
-                
-                total_weighted_score += norm_score * cat.dynamic_weight
-                total_weight_used += cat.dynamic_weight
-        
-        # Calculate raw average (0 to 1)
-        raw_average = (total_weighted_score / total_weight_used) if total_weight_used > 0 else 0.0
-        
-        # === THE FIX: S-CURVE POLARIZATION ===
-        # This function keeps 0, 0.5, and 1 the same, but curves everything else outward.
-        # It creates a wider gap between "Okay" and "Great"
-        import math
-        
-        # A simple cosine curve to stretch scores
-        # Maps 0.5 -> 0.5, but pushes 0.7 -> 0.85 and 0.3 -> 0.15
-        polarized_score = (1 - math.cos(raw_average * math.pi)) / 2
-        
-        # Convert back to 10 point scale
-        self.final_score = polarized_score * 10
-        
-        return self.final_score, self.categories
+    self.final_score = polarized_score * 10
+    return self.final_score, self.categories
 # ==============================================================================
 # 3. HELPER FUNCTION FOR DISPLAYING LEADERBOARD (COMMENTED OUT)
 # ==============================================================================
