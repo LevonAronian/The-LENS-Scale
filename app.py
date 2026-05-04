@@ -362,47 +362,43 @@ class MovieRater:
         
         for cat in self.categories:
             if cat.user_rating is not None and cat.max_score > 1:
-                # 1. CALCULATE NORMALIZED SCORE (0.0 to 1.0)
+                # 1. BASE WEIGHTED MATH
                 norm_score = (cat.user_rating - 1) / (cat.max_score - 1)
-                
-                # 2. APPLY WEIGHT MULTIPLIERS (The 2.5x multipliers we set earlier)
                 multiplier = cat.weight_multipliers.get(cat.user_rating, 1.0)
                 cat.dynamic_weight = cat.base_weight * multiplier
                 
                 total_weighted_score += norm_score * cat.dynamic_weight
                 total_weight_used += cat.dynamic_weight
 
-                # 3. ADD FLAT BONUSES / PENALTIES
-                # For 10-point scales
+                # 2. SELECTIVE BONUSES (Only for 10-point categories)
                 if cat.max_score == 10:
-                    if cat.user_rating == 10: bonus_points += 0.5
-                    elif cat.user_rating == 9: bonus_points += 0.1
-                    elif cat.user_rating == 2: bonus_points -= 0.1
-                    elif cat.user_rating == 1: bonus_points -= 0.5
-                
-                # For 5-point scales (Adjusted proportionally)
-                elif cat.max_score == 5:
-                    if cat.user_rating == 5: bonus_points += 0.5  # Perfect
-                    elif cat.user_rating == 4: bonus_points += 0.1 # Great
-                    elif cat.user_rating == 2: bonus_points -= 0.1 # Poor
-                    elif cat.user_rating == 1: bonus_points -= 0.5 # Terrible
+                    if cat.user_rating == 10:
+                        bonus_points += 0.5
+                    elif cat.user_rating == 9:
+                        bonus_points += 0.1
+                    elif cat.user_rating == 2:
+                        bonus_points -= 0.1
+                    elif cat.user_rating == 1:
+                        bonus_points -= 0.5
 
-        # 4. CALCULATE RAW AVERAGE
+        # 3. CALCULATE RAW AVERAGE
         raw_average = (total_weighted_score / total_weight_used) if total_weight_used > 0 else 0.5
         
-        # 5. POLARIZATION CURVE (Pushes 6.5s toward 8s and 4.5s toward 3s)
-        sensitivity = 1.6 # Adjusted slightly down since we now have flat bonuses
+        # 4. POLARIZATION (Pushes 6.5s to 8s and 4.5s to 3s)
+        # This fixes the "everything is a 5" problem
+        import math
+        sensitivity = 1.7 
+        
         if raw_average > 0.5:
-            polarized_score = 0.5 + 0.5 * pow((raw_average - 0.5) / 0.5, 1/sensitivity)
+            stretched = 0.5 + 0.5 * pow((raw_average - 0.5) / 0.5, 1/sensitivity)
         else:
-            polarized_score = 0.5 - 0.5 * pow((0.5 - raw_average) / 0.5, 1/sensitivity)
+            stretched = 0.5 - 0.5 * pow((0.5 - raw_average) / 0.5, 1/sensitivity)
         
-        # 6. COMBINE EVERYTHING
-        # Convert polarized score to 10-point scale and add the flat bonuses
-        self.final_score = (polarized_score * 10) + bonus_points
+        # 5. FINAL ASSEMBLY
+        # Base score (0-10) + Bonuses from 10-point categories
+        self.final_score = (stretched * 10) + bonus_points
         
-        # 7. FINAL CLAMPING
-        # Ensure the score stays between 0.0 and 10.0
+        # Clamp to ensure it never goes out of bounds
         self.final_score = max(0.0, min(10.0, self.final_score))
         
         return self.final_score, self.categories
