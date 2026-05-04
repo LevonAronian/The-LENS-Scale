@@ -12,7 +12,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Story/Plot",
             "max_score": 10,
-            "weight": 0.14,
+            "weight": 0.2,
             "weight_multipliers": { 10: 2.3, 9: 1.9, 8: 1.7, 7: 1.3, 6: 1.0, 5: 1.0, 4: 1.1, 3: 1.7, 2: 1.9,  1: 2.3 },
             "descriptors": [
                 "1: Incoherent. A complete mess with no discernible structure or purpose.",
@@ -30,7 +30,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Acting (Leading roles)",
             "max_score": 10,
-            "weight": 0.08,
+            "weight": 0.14,
             "weight_multipliers": { 10: 2.0, 9: 1.75, 8: 1.5, 7: 1.3, 6: 1.0, 5: 1.0, 4: 1.1, 3: 1.5, 2: 1.75,  1: 2.0 },
             "descriptors": [
                 "1: Unwatchable. The performance is so bad it's embarrassing and ruins every scene.",
@@ -48,7 +48,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Acting (Supporting roles)",
             "max_score": 10,
-            "weight": 0.05,
+            "weight": 0.08,
             "weight_multipliers": { 10: 1.6, 9: 1.4, 8: 1.3, 7: 1.05, 6: 1.0, 5: 1.0, 4: 1.05, 3: 1.3, 2: 1.4, 1: 1.6 },
             "descriptors": [
                 "1: Unwatchable. The performance is so bad it's embarrassing and ruins every scene.",
@@ -66,7 +66,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Soundtrack (Quality and Fit)",
             "max_score": 10,
-            "weight": 0.06,
+            "weight": 0.13,
             "weight_multipliers": { 10: 2.0, 9: 1.75, 8: 1.5, 7: 1.3, 6: 1.0, 5: 1.0, 4: 1.1, 3: 1.5, 2: 1.75,  1: 2.0  },
             "descriptors": [
                 "1: Detrimental. The music is actively annoying or so inappropriate it sabotages the film's mood.",
@@ -84,7 +84,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Plotholes",
             "max_score": 10,
-            "weight": 0.07,
+            "weight": 0.13,
             "weight_multipliers": { 10: 2.0, 9: 1.75, 8: 1.5, 7: 1.3, 6: 1.0, 5: 1.0, 4: 1.1, 3: 1.5, 2: 1.75,  1: 2.0 },
             "descriptors": [
                 "1: Completely Broken. The film's logic is so flawed it is fundamentally nonsensical.",
@@ -102,7 +102,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Tonality (Fit and Consistency)",
             "max_score": 10,
-            "weight": 0.07,
+            "weight": 0.1,
             "weight_multipliers": {  10: 1.6, 9: 1.4, 8: 1.3, 7: 1.05, 6: 1.0, 5: 1.0, 4: 1.05, 3: 1.3, 2: 1.4, 1: 1.6  },
             "descriptors": [
                 "1: Incoherent Whiplash. Jarring, chaotic shifts between incompatible tones.",
@@ -120,7 +120,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Core Concept",
             "max_score": 10,
-            "weight": 0.03,
+            "weight": 0.05,
             "weight_multipliers": {  10: 1.6, 9: 1.4, 8: 1.3, 7: 1.05, 6: 1.0, 5: 1.0, 4: 1.05, 3: 1.3, 2: 1.4, 1: 1.6 },
             "descriptors": [
                 "1: Fundamentally Bad Idea. A premise with no discernible merit.",
@@ -138,7 +138,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Expectation (Personal + What the Movie sets for itself)",
             "max_score": 10,
-            "weight": 0.04,
+            "weight": 0.06,
             "weight_multipliers": {  10: 1.6, 9: 1.4, 8: 1.3, 7: 1.05, 6: 1.0, 5: 1.0, 4: 1.05, 3: 1.3, 2: 1.4, 1: 1.6  },
             "descriptors": [
                 "1: Colossal Disappointment. Failed on all fronts.",
@@ -156,7 +156,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Audio (Sound effects and Quality)",
             "max_score": 5,
-            "weight": 0.06,
+            "weight": 0.09,
             "weight_multipliers": {5: 1.8, 4: 1.4, 3: 1.0, 2: 1.3, 1: 1.8},
             "descriptors": [
                 "1: Unusable. Ruins the viewing experience.",
@@ -169,7 +169,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Visuals (Realism and Interest/Intrigue)",
             "max_score": 5,
-            "weight": 0.06,
+            "weight": 0.08 ,
             "weight_multipliers": {5: 1.8, 4: 1.4, 3: 1.0, 2: 1.3, 1: 1.8},
             "descriptors": [
                 "1: Unwatchable. Visually incoherent or ugly.",
@@ -182,7 +182,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Effects (Visual and Special)",
             "max_score": 5,
-            "weight": 0.05,
+            "weight": 0.06,
             "weight_multipliers": {5: 1.5, 4: 1.3, 3: 1.0, 2: 1.3, 1: 1.5},
             "descriptors": [
                 "1: Abysmal. Laughably bad, shatters immersion.",
@@ -195,7 +195,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Length",
             "max_score": 5,
-            "weight": 0.07,
+            "weight": 0.09,
             "weight_multipliers": {5: 1.8, 4: 1.4, 3: 1.0, 2: 1.3, 1: 1.8},
             "descriptors": [
                 "1: Terribly Judged. Grotesquely bloated or brutally short.",
@@ -208,7 +208,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Pacing",
             "max_score": 5,
-            "weight": 0.07,
+            "weight": 0.08,
             "weight_multipliers": {5: 1.8, 4: 1.4, 3: 1.0, 2: 1.3, 1: 1.8},
             "descriptors": [
                 "1: Excruciating. The flow is completely broken; a chore to watch.",
@@ -221,7 +221,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Potential (Subplot quality/interest as well as amount to explore)",
             "max_score": 5,
-            "weight": 0.03,
+            "weight": 0.05,
             "weight_multipliers": {5: 1.15, 4: 1.1, 3: 1.0, 2: 1.1, 1: 1.15},
             "descriptors": [
                 "1: Shallow & Uninspired. Feels like a cardboard cutout.",
@@ -261,7 +261,7 @@ CATEGORY_DEFINITIONS = [
     {
             "name": "Personal Enjoyment (Individuals Overall Score)",
             "max_score": 10,
-            "weight": 0.02,
+            "weight": 0.04,
             "weight_multipliers": { 10: 1.25, 9: 1.2, 8: 1.15, 7: 1.1, 6: 1.0, 5: 1.0, 4: 1.1, 3: 1.15, 2: 1.2, 1: 1.25 },
             "descriptors": [
                 "This is your personal gut-check score from 1-10.",
@@ -352,41 +352,60 @@ class Category:
             self.dynamic_weight = weight
 class MovieRater:
     def __init__(self, categories):
-            self.categories = categories
-            self.final_score = 0.0
+        self.categories = categories
+        self.final_score = 0.0
 
     def calculate_score(self):
-    total_weighted_score = 0.0
-    total_weight_used = 0.0
-
-    for cat in self.categories:
+        total_weighted_score = 0.0
+        total_weight_used = 0.0
+        bonus_points = 0.0
+        
+        for cat in self.categories:
             if cat.user_rating is not None and cat.max_score > 1:
-                # Normalize rating to 0-1 scale
+                # 1. CALCULATE NORMALIZED SCORE (0.0 to 1.0)
                 norm_score = (cat.user_rating - 1) / (cat.max_score - 1)
-
-                # Apply multipliers (Make sure these are high in your definition!)
+                
+                # 2. APPLY WEIGHT MULTIPLIERS (The 2.5x multipliers we set earlier)
                 multiplier = cat.weight_multipliers.get(cat.user_rating, 1.0)
                 cat.dynamic_weight = cat.base_weight * multiplier
-
+                
                 total_weighted_score += norm_score * cat.dynamic_weight
                 total_weight_used += cat.dynamic_weight
 
-    raw_average = (total_weighted_score / total_weight_used) if total_weight_used > 0 else 0.5
+                # 3. ADD FLAT BONUSES / PENALTIES
+                # For 10-point scales
+                if cat.max_score == 10:
+                    if cat.user_rating == 10: bonus_points += 0.5
+                    elif cat.user_rating == 9: bonus_points += 0.1
+                    elif cat.user_rating == 2: bonus_points -= 0.1
+                    elif cat.user_rating == 1: bonus_points -= 0.5
+                
+                # For 5-point scales (Adjusted proportionally)
+                elif cat.max_score == 5:
+                    if cat.user_rating == 5: bonus_points += 0.5  # Perfect
+                    elif cat.user_rating == 4: bonus_points += 0.1 # Great
+                    elif cat.user_rating == 2: bonus_points -= 0.1 # Poor
+                    elif cat.user_rating == 1: bonus_points -= 0.5 # Terrible
 
-    # === THE FIX: STEERABLE S-CURVE ===
-    # sensitivity > 1 makes the curve steeper (pushes scores to 0 or 10)
-    # Try 1.5 for moderate, 2.0 for aggressive polarization
-    sensitivity = 1.8
-
-    if raw_average > 0.5:
-            # Push higher
+        # 4. CALCULATE RAW AVERAGE
+        raw_average = (total_weighted_score / total_weight_used) if total_weight_used > 0 else 0.5
+        
+        # 5. POLARIZATION CURVE (Pushes 6.5s toward 8s and 4.5s toward 3s)
+        sensitivity = 1.6 # Adjusted slightly down since we now have flat bonuses
+        if raw_average > 0.5:
             polarized_score = 0.5 + 0.5 * pow((raw_average - 0.5) / 0.5, 1/sensitivity)
-    else:
-            # Push lower
+        else:
             polarized_score = 0.5 - 0.5 * pow((0.5 - raw_average) / 0.5, 1/sensitivity)
-
-    self.final_score = polarized_score * 10
-    return self.final_score, self.categories
+        
+        # 6. COMBINE EVERYTHING
+        # Convert polarized score to 10-point scale and add the flat bonuses
+        self.final_score = (polarized_score * 10) + bonus_points
+        
+        # 7. FINAL CLAMPING
+        # Ensure the score stays between 0.0 and 10.0
+        self.final_score = max(0.0, min(10.0, self.final_score))
+        
+        return self.final_score, self.categories
 # ==============================================================================
 # 3. HELPER FUNCTION FOR DISPLAYING LEADERBOARD (COMMENTED OUT)
 # ==============================================================================
